@@ -1,0 +1,42 @@
+version: "3.8"
+services:
+    ###
+    ### MYSQL - BDD
+    ###
+    mysql:
+        container_name: "bigdata-project-mysql"
+        image: "mysql:latest"
+        restart: unless-stopped
+        volumes:
+            - bigdata-project-mysql-data:/var/lib/mysql
+            - ./database/init/init.sql:/docker-entrypoint-initdb.d/init.sql
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        ports:
+            - "3306:3306"
+        networks:
+            - "bigdata-project-network"
+
+    ###
+    ### PHPMYADMIN - VISUALISATION BDD
+    ###
+    phpmyadmin:
+        container_name: "bigdata-project-phpmyadmin"
+        image: "phpmyadmin:latest"
+        restart: unless-stopped
+        depends_on:
+            - mysql
+        environment:
+            PMA_HOST: mysql
+        ports:
+            - "8080:80"
+        networks:
+            - "bigdata-project-network"
+
+networks:
+    bigdata-project-network:
+        driver: "bridge"
+        name: "bigdata-project-network"
+
+volumes:
+    bigdata-project-mysql-data:
