@@ -1,6 +1,7 @@
 import os
 import logging
 from etl.extract import DataExtractor
+from etl.transform import DataTransformer
 
 # Configuration du logger
 logging.basicConfig(
@@ -24,15 +25,23 @@ def main():
     # 2) Initialisation des objets ETL
     # ----------------------------------------------------------------
     extractor = DataExtractor()
-    
+    transformer = DataTransformer()
+
     # ----------------------------------------------------------------
     # 3) EXTRACT : Charger les données
     # ----------------------------------------------------------------
-    df_env = extractor.extract_environmental_data(data_path)
+    df_environnemental = extractor.extract_environmental_data(data_path)
 
-    if df_env:
+    if df_environnemental:
         logger.info("✅ Extraction réussie ! Aperçu des données :")
-        df_env.show(5)  # Afficher un aperçu des 5 premières lignes
+        df_environnemental.show(5)  # Afficher un aperçu des 5 premières lignes
+
+    # ----------------------------------------------------------------
+    # 4) TRANSFORM : Transformer les données
+    # ----------------------------------------------------------------
+    if df_environnemental:
+        df_environnemental = transformer.transform_environmental_data(df_environnemental)
+        
 
     # Arrêt de la session Spark
     extractor.stop()
