@@ -30,6 +30,7 @@ class DataExtractor:
             SparkSession.builder.appName(app_name)
             .master(master)
             .config("spark.driver.host", "127.0.0.1")
+            .config("spark.driver.extraClassPath", "./database/connector/mysql-connector-j-9.1.0.jar") \
             .config("spark.hadoop.fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
             .getOrCreate()
         )

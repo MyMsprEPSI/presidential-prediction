@@ -38,14 +38,14 @@ class DataTransformer:
             col("Parc_installé_solaire_MW"),
         )
 
-        # Remplacement des valeurs vides par NULL
+        # Remplacement des valeurs vides par 0
         df_transformed = df_transformed.withColumn(
             "Parc_installé_éolien_MW",
             when(
                 (col("Parc_installé_éolien_MW").isNull())
                 | (isnan(col("Parc_installé_éolien_MW"))),
-                lit(None),
-            ).otherwise(col("Parc_installé_éolien_MW")),
+                lit(0),
+            ).otherwise(col("Parc_installé_éolien_MW").cast("double")),
         )
 
         df_transformed = df_transformed.withColumn(
@@ -53,22 +53,11 @@ class DataTransformer:
             when(
                 (col("Parc_installé_solaire_MW").isNull())
                 | (isnan(col("Parc_installé_solaire_MW"))),
-                lit(None),
-            ).otherwise(col("Parc_installé_solaire_MW")),
-        )
-
-        # Création des colonnes indicatrices de valeurs manquantes (1 = valeur manquante, 0 = valeur présente)
-        df_transformed = df_transformed.withColumn(
-            "eolien_missing",
-            when(col("Parc_installé_éolien_MW").isNull(), lit(1)).otherwise(lit(0)),
-        )
-
-        df_transformed = df_transformed.withColumn(
-            "solaire_missing",
-            when(col("Parc_installé_solaire_MW").isNull(), lit(1)).otherwise(lit(0)),
+                lit(0),
+            ).otherwise(col("Parc_installé_solaire_MW").cast("double")),
         )
 
         logger.info("✅ Transformation terminée ! Aperçu des données transformées :")
-        df_transformed.show(5, truncate=False)
+        df_transformed.show(15, truncate=False)
 
         return df_transformed
