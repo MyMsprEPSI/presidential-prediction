@@ -1,8 +1,7 @@
 import logging
-import mysql.connector
-from pyspark.sql import DataFrame
+import os
+import shutil
 
-# Configuration du logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -11,111 +10,59 @@ logging.basicConfig(
 
 class DataLoader:
     """
-    Classe pour charger dynamiquement des DataFrames dans MySQL.
-    - Vérifie et crée la table si elle n'existe pas.
-    - Charge les données avec gestion automatique des colonnes.
+    Classe permettant d'enregistrer un DataFrame PySpark transformé en fichier CSV.
+    Le fichier est nommé selon le format "<nom_fichier_base>_processed.csv".
     """
 
-    def __init__(
-        self,
-        jdbc_url,
-        user,
-        password,
-        database,
-        host,
-        port,
-        driver="com.mysql.cj.jdbc.Driver",
-    ):
-        self.jdbc_url = jdbc_url
-        self.user = user
-        self.password = password
-        self.database = database
-        self.host = host
-        self.port = port
-        self.driver = driver
+    def __init__(self, output_dir="data\processed_data"):
+        """
+        Initialise le DataLoader avec un répertoire de sortie.
 
-    def load_data(self, df: DataFrame, table_name: str, mode="append"):
+        :param output_dir: Dossier où seront stockés les fichiers CSV transformés.
         """
-        Charge un DataFrame dans MySQL en créant la table si nécessaire.
-        :param df: DataFrame PySpark à insérer
-        :param table_name: Nom de la table MySQL
-        :param mode: Mode d'insertion (append, overwrite)
+        self.output_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok=True)  # Crée le dossier s'il n'existe pas
+
+    def save_to_csv(self, df, input_file_path):
         """
-        if df is None or df.isEmpty():
-            logger.error("❌ Le DataFrame est vide ou invalide.")
+        Sauvegarde un DataFrame en fichier CSV après transformation.
+
+        :param df: DataFrame PySpark transformé
+        :param input_file_path: Chemin du fichier source initial
+        """
+        if df is None:
+            logger.error("❌ Impossible de sauvegarder un DataFrame vide.")
             return
 
-        # Connexion MySQL pour vérifier/créer la table
-        conn = mysql.connector.connect(
-            host=self.host,
-            port=self.port,
-            user=self.user,
-            password=self.password,
-            database=self.database,
+        # Extraire le nom de base du fichier source et générer le nom du fichier final
+        base_name = os.path.basename(input_file_path).replace(".csv", "_processed.csv")
+        temp_output_dir = os.path.join(
+            "data/processed_data", "temp_csv_output"
+        )  # Dossier temporaire
+        final_output_path = os.path.join("data/processed_data", base_name)
+
+        logger.info(
+            f"💾 Enregistrement des données transformées dans : {final_output_path}"
         )
-        cursor = conn.cursor()
 
         try:
-            # Création de la table si elle n'existe pas
-            self._create_table_if_not_exists(cursor, df, table_name)
-            conn.commit()
-
-            # Définition des propriétés JDBC
-            props = {
-                "user": self.user,
-                "password": self.password,
-                "driver": self.driver,
-            }
-
-            # Chargement des données via JDBC
-            df.write.jdbc(
-                url=self.jdbc_url, table=table_name, mode=mode, properties=props
+            # Sauvegarde en CSV dans un dossier temporaire avec une seule partition (1 seul fichier)
+            df.coalesce(1).write.mode("overwrite").option("header", "true").csv(
+                temp_output_dir
             )
-            logger.info(f"✅ Données chargées dans la table {table_name} avec succès.")
 
+            # Trouver le fichier CSV généré dans le dossier temporaire
+            for filename in os.listdir(temp_output_dir):
+                if filename.endswith(".csv"):
+                    temp_csv_path = os.path.join(temp_output_dir, filename)
+                    shutil.move(
+                        temp_csv_path, final_output_path
+                    )  # Renommer le fichier final
+                    break
+
+            # Supprimer le dossier temporaire
+            shutil.rmtree(temp_output_dir)
+
+            logger.info("✅ Fichier CSV sauvegardé avec succès !")
         except Exception as e:
-            logger.error(f"❌ Erreur lors du chargement des données : {str(e)}")
-
-        finally:
-            cursor.close()
-            conn.close()
-
-    def _create_table_if_not_exists(self, cursor, df: DataFrame, table_name: str):
-        """
-        Crée une table MySQL si elle n'existe pas, basée sur les colonnes du DataFrame.
-        :param cursor: Curseur MySQL
-        :param df: DataFrame PySpark
-        :param table_name: Nom de la table MySQL
-        """
-        # Récupération des colonnes et types de données
-        schema = df.schema
-        columns_sql = []
-
-        type_mapping = {
-            "IntegerType": "INT",
-            "StringType": "VARCHAR(255)",
-            "DoubleType": "DOUBLE",
-            "FloatType": "FLOAT",
-            "BooleanType": "BOOLEAN",
-            "DateType": "DATE",
-            "TimestampType": "TIMESTAMP",
-        }
-
-        for field in schema.fields:
-            sql_type = type_mapping.get(field.dataType.simpleString(), "TEXT")
-            columns_sql.append(f"`{field.name}` {sql_type}")
-
-        # Construction de la requête SQL
-        create_table_query = f"""
-        CREATE TABLE IF NOT EXISTS `{table_name}` (
-            {', '.join(columns_sql)}
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        """
-
-        try:
-            cursor.execute(create_table_query)
-            logger.info(f"✅ Table `{table_name}` vérifiée/créée avec succès.")
-        except Exception as e:
-            logger.error(
-                f"❌ Erreur lors de la création de la table {table_name} : {str(e)}"
-            )
+            logger.error(f"❌ Erreur lors de l'enregistrement du fichier : {str(e)}")

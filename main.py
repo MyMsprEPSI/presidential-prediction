@@ -1,5 +1,3 @@
-# main.py
-import os
 import logging
 from etl.extract import DataExtractor
 from etl.transform import DataTransformer
@@ -13,58 +11,60 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    """
+    Point d'entrée principal de l'ETL :
+    - Extraction des données
+    - Transformation
+    - Enregistrement en CSV
+    """
+
     # ----------------------------------------------------------------
     # 1) Définition des chemins
     # ----------------------------------------------------------------
-    data_path = "./data/environnemental/parc-regional-annuel-prod-eolien-solaire.csv"
-
-    # JDBC MySQL
-    jdbc_url = "jdbc:mysql://localhost:3306/bigdata_project"
-    jdbc_user = "root"
-    jdbc_password = ""
-    jdbc_driver = "com.mysql.cj.jdbc.Driver"
+    input_file_path = (
+        "./data/environnemental/parc-regional-annuel-prod-eolien-solaire.csv"
+    )
 
     # ----------------------------------------------------------------
     # 2) Initialisation des objets ETL
     # ----------------------------------------------------------------
-    extractor = DataExtractor(app_name="BigDataProject_ETL")
+    extractor = DataExtractor()
     transformer = DataTransformer()
-    loader = DataLoader(
-        jdbc_url=jdbc_url,
-        user=jdbc_user,
-        password=jdbc_password,
-        database="bigdata_project",
-        host="localhost",
-        port="3306",
-        driver=jdbc_driver,
-    )
+    loader = DataLoader()
 
     # ----------------------------------------------------------------
     # 3) EXTRACT : Charger les données
     # ----------------------------------------------------------------
-    logger.info("=== Extraction des données environnementales ===")
-    df_env = extractor.extract_environmental_data(data_path)
+    df_env = extractor.extract_environmental_data(input_file_path)
+
+    if df_env is None:
+        logger.error("❌ Échec de l'extraction des données. Arrêt du programme.")
+        return
+
+    logger.info("✅ Extraction réussie ! Aperçu des données extraites :")
+    df_env.show(5, truncate=False)
 
     # ----------------------------------------------------------------
-    # 4) TRANSFORM : Appliquer les transformations
+    # 4) TRANSFORM : Nettoyage et sélection des données
     # ----------------------------------------------------------------
-    if df_env is not None:
-        df_env_transformed = transformer.transform_environmental_data(df_env)
-    else:
-        df_env_transformed = None
+    df_transformed = transformer.transform_environmental_data(df_env)
+
+    if df_transformed is None:
+        logger.error("❌ Échec de la transformation des données. Arrêt du programme.")
+        return
+
+    logger.info("✅ Transformation réussie ! Aperçu des données transformées :")
+    df_transformed.show(5, truncate=False)
 
     # ----------------------------------------------------------------
-    # 5) LOAD : Chargement dans MySQL
+    # 5) LOAD : Sauvegarde en fichier CSV
     # ----------------------------------------------------------------
-    logger.info("=== Chargement des données dans MySQL ===")
-    if df_env_transformed is not None:
-        loader.load_data(df_env_transformed, "environnement", mode="append")
+    loader.save_to_csv(df_transformed, input_file_path)
 
     # ----------------------------------------------------------------
-    # 6) Arrêt de Spark
+    # 6) Arrêt de la session Spark
     # ----------------------------------------------------------------
     extractor.stop()
-    logger.info("✅ ETL terminé avec succès.")
 
 
 if __name__ == "__main__":
