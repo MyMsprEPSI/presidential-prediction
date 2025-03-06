@@ -32,7 +32,10 @@ class DataExtractor:
             SparkSession.builder.appName(app_name)
             .master(master)
             .config("spark.driver.host", "127.0.0.1")
-            .config("spark.driver.extraClassPath", "./database/connector/mysql-connector-j-9.1.0.jar") \
+            .config(
+                "spark.driver.extraClassPath",
+                "./database/connector/mysql-connector-j-9.1.0.jar;./database/connector/spark-excel_2.12-3.5.0_0.20.3.jar",
+            )
             .config("spark.hadoop.fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
             .getOrCreate()
         )
@@ -96,7 +99,6 @@ class DataExtractor:
             logger.error(f"❌ Erreur lors de l'extraction des données : {str(e)}")
             return None
 
-
     def extract_pib_outre_mer(self, file_paths):
         """
         Extrait et combine les données PIB brutes des fichiers CSV outre-mer.
@@ -133,6 +135,82 @@ class DataExtractor:
         df_combined = reduce(lambda df1, df2: df1.union(df2), dfs)
 
         return df_combined
+
+    def extract_pib_excel(self, excel_path):
+        """
+        Extrait les données PIB régionales à partir du fichier Excel (1990-2021).
+        """
+        if not os.path.exists(excel_path):
+            logger.error(f"❌ Fichier non trouvé : {excel_path}")
+            return None
+
+        logger.info(f"📥 Extraction PIB Excel : {excel_path}")
+
+        schema = StructType(
+            [
+                StructField("Code_INSEE_Région", StringType(), True),
+                StructField("libgeo", StringType(), True),
+                StructField("Année", IntegerType(), True),
+                StructField("PIB_en_euros_par_habitant", IntegerType(), True),
+            ]
+        )
+
+        try:
+            df = (
+                self.spark.read.format("com.crealytics.spark.excel")
+                .option("header", "true")
+                .option("dataAddress", "'Data'!A5")
+                .schema(schema)
+                .load(excel_path)
+            )
+
+            df = df.select("Année", "PIB_en_euros_par_habitant", "Code_INSEE_Région")
+            return df
+
+        except Exception as e:
+            logger.error(f"❌ Erreur extraction Excel : {str(e)}")
+            return None
+
+    def extract_pib_2022(self, csv_path):
+        """
+        Extrait et nettoie le fichier PIB 2022 régional CSV.
+        """
+
+        if not os.path.exists(csv_path):
+            logger.error(f"❌ Fichier non trouvé : {csv_path}")
+            return None
+
+        logger.info(f"📥 Extraction PIB 2022 depuis : {csv_path}")
+
+        # Définition du schéma correct
+        schema = StructType(
+            [
+                StructField("Code_INSEE_Région", StringType(), True),
+                StructField("Libellé", StringType(), True),
+                StructField("PIB_en_euros_par_habitant", IntegerType(), True),
+            ]
+        )
+
+        # Lecture du fichier en ignorant les 2 premières lignes inutiles
+        df_raw = (
+            self.spark.read.option("header", "true")
+            .option("delimiter", ";")
+            .option("inferSchema", "true")  # Permet d'autodétecter les types
+            .schema(schema)  # Appliquer le schéma explicite
+            .csv(csv_path)
+        )
+
+        # Vérification des colonnes détectées
+        logger.info(f"🛠️ Colonnes après nettoyage : {df_raw.columns}")
+
+        # Ajout de l'année 2022 à chaque ligne
+        df_cleaned = df_raw.select(
+            col("Code_INSEE_Région"),
+            lit(2022).alias("Année"),
+            col("PIB_en_euros_par_habitant")
+        )
+
+        return df_cleaned
 
     def stop(self):
         """

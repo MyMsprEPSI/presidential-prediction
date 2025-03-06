@@ -121,7 +121,6 @@ class DataTransformer:
 
         return df_final
 
-
     def fill_missing_pib_mayotte(self, df_pib):
         """
         Remplit les valeurs manquantes du PIB de Mayotte par régression linéaire.
@@ -167,6 +166,62 @@ class DataTransformer:
         )
 
         logger.info("✅ Remplissage PIB Mayotte terminé :")
+        df_final.show(10, truncate=False)
+
+        return df_final
+
+    def combine_all_pib_data(self, df_pib_outremer, df_pib_xlsx, df_pib_2022):
+        """
+        Combine les données PIB des différentes sources en un seul DataFrame.
+        """
+
+        logger.info("🚀 Fusion des données PIB (Outre-mer, Excel, 2022)...")
+
+        # Harmoniser les colonnes
+        df_pib_xlsx = df_pib_xlsx.select(
+            "Année", "PIB_en_euros_par_habitant", "Code_INSEE_Région"
+        )
+        df_pib_2022 = df_pib_2022.select(
+            "Année", "PIB_en_euros_par_habitant", "Code_INSEE_Région"
+        )
+        df_pib_outremer = df_pib_outremer.select(
+            "Année", "PIB_en_euros_par_habitant", "Code_INSEE_Région"
+        )
+
+        # Liste des régions présentes en 2022
+        regions_2022 = [
+            row["Code_INSEE_Région"]
+            for row in df_pib_2022.select("Code_INSEE_Région").distinct().collect()
+        ]
+
+        # Identifier les régions absentes en 2022
+        missing_regions = (
+            df_pib_xlsx.select("Code_INSEE_Région")
+            .distinct()
+            .filter(~col("Code_INSEE_Région").isin(regions_2022))
+        )
+
+        # Ajouter des lignes vides pour les régions absentes en 2022
+        if missing_regions.count() > 0:
+            df_missing_2022 = missing_regions.withColumn("Année", lit(2022)).withColumn(
+                "PIB_en_euros_par_habitant", lit(None).cast("int")
+            )
+            df_pib_2022 = df_pib_2022.union(df_missing_2022)
+
+        # Fusion des données
+        df_final = df_pib_outremer.union(df_pib_xlsx).union(df_pib_2022)
+
+        # **Filtrer les lignes invalides** (Code région doit être numérique et PIB non NULL)
+        df_final = df_final.filter(
+            (col("Code_INSEE_Région").rlike("^[0-9]+$"))
+            & (col("PIB_en_euros_par_habitant").isNotNull())
+        )
+
+        # Filtrer et trier
+        df_final = df_final.filter((col("Année") >= 2000) & (col("Année") <= 2022))
+        df_final = df_final.orderBy(["Code_INSEE_Région", "Année"])
+
+        logger.info("✅ Fusion des données PIB réussie :")
         df_final.show(10, truncate=False)
 
         return df_final

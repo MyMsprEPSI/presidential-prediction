@@ -43,6 +43,10 @@ def main():
         "./data/socio-economie/PIB Mayotte.csv": "06"
     }
 
+    # Ajoute à tes imports existants
+    pib_xlsx_file = "./data/socio-economie/PIB 1990 - 2021.xlsx"
+    pib_2022_file = "./data/socio-economie/PIB par Région en 2022.csv"
+
     # ----------------------------------------------------------------
     # 2) Initialisation des objets ETL
     # ----------------------------------------------------------------
@@ -76,6 +80,16 @@ def main():
     df_pib.show(5, truncate=False)
 
     # ----------------------------------------------------------------
+    # 3.2) EXTRACT : Charger les données PIB régionaux (nouveaux fichiers)
+    # ----------------------------------------------------------------
+    df_pib_xlsx = extractor.extract_pib_excel(pib_xlsx_file)
+    df_pib_2022 = extractor.extract_pib_2022(pib_2022_file)
+
+    if df_pib_xlsx is None or df_pib_2022 is None:
+        logger.error("❌ Extraction PIB Excel échouée.")
+        return
+
+    # ----------------------------------------------------------------
     # 4) TRANSFORM : Nettoyage et sélection des données : environnementales
     # ----------------------------------------------------------------
     df_transformed = transformer.transform_environmental_data(df_env)
@@ -104,12 +118,26 @@ def main():
     df_pib_transformed_completed.show(10, truncate=False)
 
     # ----------------------------------------------------------------
+    # 4.2) TRANSFORM : Combinaison finale de toutes les données PIB
+    # ----------------------------------------------------------------
+    df_pib_total = transformer.combine_all_pib_data(
+        df_pib_transformed_completed, df_pib_xlsx, df_pib_2022
+    )
+
+    if df_pib_xlsx is None or df_pib_2022 is None:
+        logger.error("❌ Transformation PIB fichiers XLSX ou 2022 échouée.")
+        return
+
+    logger.info("✅ Fusion des données PIB réussie :")
+    df_pib_total.show(300, truncate=False)
+
+    # ----------------------------------------------------------------
     # 5) LOAD : Sauvegarde en fichier CSV
     # ----------------------------------------------------------------
     loader.save_to_csv(df_transformed, input_file_path)
 
-    output_path_pib = "./data/processed_data/pib_outre_mer.csv"
-    loader.save_to_csv(df_pib_transformed_completed, output_path_pib)
+    output_path_pib_final = "./data/processed_data/pib_regional_final.csv"
+    loader.save_to_csv(df_pib_total, output_path_pib_final)
 
     # ----------------------------------------------------------------
     # 6) Arrêt de la session Spark
