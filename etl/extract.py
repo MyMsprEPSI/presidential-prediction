@@ -8,7 +8,7 @@ from pyspark.sql.types import (
     StringType,
     DoubleType,
 )
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, lit
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -93,6 +93,44 @@ class DataExtractor:
         except Exception as e:
             logger.error(f"❌ Erreur lors de l'extraction des données : {str(e)}")
             return None
+
+
+    def extract_pib_outre_mer(self, file_paths):
+        """
+        Extrait et combine les données PIB brutes des fichiers CSV outre-mer.
+        """
+        schema = StructType(
+            [
+                StructField("Année", StringType(), True),
+                StructField("PIB_en_euros_par_habitant", StringType(), True),
+                StructField("Codes", StringType(), True),
+            ]
+        )
+
+        dfs = []
+        for path in file_paths:
+            if os.path.exists(path):
+                df = (
+                    self.spark.read.option("header", "true")
+                    .option("delimiter", ";")
+                    .schema(schema)
+                    .csv(path)
+                )
+                # Ajoute une colonne temporaire indiquant le fichier source
+                df = df.withColumn("source_file", lit(path))
+                dfs.append(df)
+            else:
+                logger.error(f"❌ Fichier non trouvé : {path}")
+
+        if not dfs:
+            logger.error("❌ Aucun fichier PIB valide trouvé.")
+            return None
+
+        from functools import reduce
+
+        df_combined = reduce(lambda df1, df2: df1.union(df2), dfs)
+
+        return df_combined
 
     def stop(self):
         """

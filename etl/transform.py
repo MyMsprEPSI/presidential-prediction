@@ -61,3 +61,59 @@ class DataTransformer:
         df_transformed.show(15, truncate=False)
 
         return df_transformed
+
+
+    def transform_pib_outre_mer(self, df_pib, region_codes):
+        """
+        Transforme les données PIB outre-mer :
+        - Suppression des lignes inutiles
+        - Ajout du code région INSEE à partir du nom du fichier
+        - Tri par Région puis Année
+        """
+
+        if df_pib is None:
+            logger.error("❌ Le DataFrame PIB est vide ou invalide.")
+            return None
+
+        logger.info("🚀 Transformation des données PIB outre-mer en cours...")
+
+        # Nettoyage des données
+        df_cleaned = df_pib.filter(
+            (~col("Année").isin(["idBank", "Dernière mise à jour", "Période"]))
+            & (col("Année").rlike("^[0-9]{4}$"))
+        ).select(
+            col("Année").cast("int"),
+            col("PIB_en_euros_par_habitant").cast("int"),
+            col("source_file"),
+        )
+
+        # Ajout du code région INSEE depuis le dictionnaire region_codes
+        condition = None
+        for file_path, code_region in region_codes.items():
+            if condition is None:
+                condition = when(
+                    col("source_file") == file_path, lit(code_region)
+                )
+            else:
+                condition = condition.when(
+                    col("source_file") == file_path, lit(code_region)
+                )
+
+        df_final = df_cleaned.withColumn("Code_INSEE_Région", lit(None))
+        for file_path, code_region in region_codes.items():
+            df_final = df_final.withColumn(
+                "Code_INSEE_Région",
+                when(col("source_file") == file_path, lit(code_region)).otherwise(
+                    col("Code_INSEE_Région")
+                ),
+            )
+
+        df_final = df_final.drop("source_file")
+
+        # Tri final
+        df_final = df_final.orderBy(["Code_INSEE_Région", "Année"])
+
+        logger.info("✅ Transformation PIB terminée ! Aperçu des données transformées :")
+        df_final.show(10, truncate=False)
+
+        return df_final
