@@ -32,7 +32,7 @@ def main():
         "./data/socio-economie/PIB Martinique.csv",
         "./data/socio-economie/PIB Guyane.csv",
         "./data/socio-economie/PIB La Réunion.csv",
-        # "./data/socio-economie/PIB Mayotte.csv" # temporairement commenté par manque de données
+        "./data/socio-economie/PIB Mayotte.csv" # temporairement commenté par manque de données
     ]
 
     region_codes = {
@@ -40,7 +40,7 @@ def main():
         "./data/socio-economie/PIB Martinique.csv": "02",
         "./data/socio-economie/PIB Guyane.csv": "03",
         "./data/socio-economie/PIB La Réunion.csv": "04",
-        # "./data/socio-economie/PIB Mayotte.csv": "06"
+        "./data/socio-economie/PIB Mayotte.csv": "06"
     }
 
     # ----------------------------------------------------------------
@@ -93,13 +93,15 @@ def main():
 
     df_pib_transformed = transformer.transform_pib_outre_mer(df_pib, region_codes)
 
+    # Remplissage des valeurs manquantes pour Mayotte uniquement
+    df_pib_transformed_completed = transformer.fill_missing_pib_mayotte(df_pib_transformed)
 
-    if df_pib_transformed is None:
-        logger.error("❌ Transformation PIB échouée.")
+    if df_pib_transformed_completed is None:
+        logger.error("❌ Remplissage PIB Mayotte échoué.")
         return
 
-    logger.info("✅ Transformation PIB réussie :")
-    df_pib_transformed.show(10, truncate=False)
+    logger.info("✅ Transformation PIB réussie (avec Mayotte rempli) :")
+    df_pib_transformed_completed.show(10, truncate=False)
 
     # ----------------------------------------------------------------
     # 5) LOAD : Sauvegarde en fichier CSV
@@ -107,7 +109,7 @@ def main():
     loader.save_to_csv(df_transformed, input_file_path)
 
     output_path_pib = "./data/processed_data/pib_outre_mer.csv"
-    loader.save_to_csv(df_pib_transformed, output_path_pib)
+    loader.save_to_csv(df_pib_transformed_completed, output_path_pib)
 
     # ----------------------------------------------------------------
     # 6) Arrêt de la session Spark

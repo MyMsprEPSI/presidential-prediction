@@ -2,6 +2,8 @@
 
 import logging
 from pyspark.sql.functions import col, when, lit, isnan
+from pyspark.ml.regression import LinearRegression
+from pyspark.ml.feature import VectorAssembler
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -64,7 +66,6 @@ class DataTransformer:
 
         return df_transformed
 
-
     def transform_pib_outre_mer(self, df_pib, region_codes):
         """
         Transforme les données PIB outre-mer :
@@ -116,6 +117,56 @@ class DataTransformer:
         df_final = df_final.orderBy(["Code_INSEE_Région", "Année"])
 
         logger.info("✅ Transformation PIB terminée ! Aperçu des données transformées :")
+        df_final.show(10, truncate=False)
+
+        return df_final
+
+
+    def fill_missing_pib_mayotte(self, df_pib):
+        """
+        Remplit les valeurs manquantes du PIB de Mayotte par régression linéaire.
+        """
+
+        from pyspark.sql.functions import col
+
+        logger.info("🚀 Remplissage des valeurs manquantes PIB Mayotte en cours...")
+
+        df_mayotte = df_pib.filter(col("Code_INSEE_Région") == "06")
+
+        known_data = df_mayotte.filter(col("PIB_en_euros_par_habitant").isNotNull())
+        unknown_data = df_mayotte.filter(col("PIB_en_euros_par_habitant").isNull())
+
+        assembler = VectorAssembler(inputCols=["Année"], outputCol="features")
+        train_data = assembler.transform(known_data).select(
+            "features", "PIB_en_euros_par_habitant"
+        )
+
+        # Modèle de régression linéaire
+        lr = LinearRegression(featuresCol="features", labelCol="PIB_en_euros_par_habitant")
+        model = lr.fit(train_data)
+
+        # Prédictions sur les données manquantes
+        pred_df = assembler.transform(unknown_data)
+        pred_result = model.transform(pred_df).select(
+            "Année",
+            col("prediction").cast("int").alias("PIB_en_euros_par_habitant"),
+            "Code_INSEE_Région",
+        )
+
+        # Combine les données connues et prédites
+        df_mayotte_completed = known_data.select(
+            "Année", "PIB_en_euros_par_habitant", "Code_INSEE_Région"
+        ).union(pred_result)
+
+        # Autres régions sans modifications
+        df_other_regions = df_pib.filter(col("Code_INSEE_Région") != "06")
+
+        # Union finale
+        df_final = df_other_regions.union(df_mayotte_completed).orderBy(
+            ["Code_INSEE_Région", "Année"]
+        )
+
+        logger.info("✅ Remplissage PIB Mayotte terminé :")
         df_final.show(10, truncate=False)
 
         return df_final
