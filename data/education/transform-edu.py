@@ -1,11 +1,16 @@
 import os
 import subprocess
-import pandas as pd
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, when, count, year, first, sum, round, lower, trim, lit
+from pyspark.sql.types import StringType, IntegerType, DateType
 
 def main():
-    # Configuration de Java (facultatif pour Pandas, mais conservé pour correspondre à l'original)
+    # Configuration de Java et Spark
     os.environ['JAVA_HOME'] = r'C:\Program Files\Java\jdk-17'
-    os.environ['PATH'] = os.environ['JAVA_HOME'] + r'\bin;' + os.environ['PATH']
+    os.environ['SPARK_HOME'] = r'C:\Users\thoma\AppData\Roaming\Python\Python312\site-packages\pyspark'
+    os.environ['PATH'] = os.environ['JAVA_HOME'] + r'\bin;' + os.environ['SPARK_HOME'] + r'\bin;' + os.environ['PATH']
+    os.environ['PYSPARK_PYTHON'] = r'C:\Python312\python.exe'
+    os.environ['PYSPARK_DRIVER_PYTHON'] = r'C:\Python312\python.exe'
     
     # Vérification de Java
     try:
@@ -14,11 +19,24 @@ def main():
         print("Erreur: Java n'est pas trouvé. Veuillez installer Java 17 et configurer JAVA_HOME.")
         return
 
-    input_path = "data/education/fr-en-etablissements-fermes.csv"  # Chemin vers le CSV source
-    output_folder = "data/education/output"              # Dossier de sortie pour le CSV transformé
+    # Initialisation de Spark avec configuration minimale
+    spark = SparkSession.builder \
+        .appName("TransformationEducation") \
+        .config("spark.driver.memory", "2g") \
+        .config("spark.executor.memory", "2g") \
+        .config("spark.driver.extraJavaOptions", "-Dfile.encoding=UTF-8") \
+        .config("spark.sql.legacy.timeParserPolicy", "LEGACY") \
+        .master("local[*]") \
+        .getOrCreate()
+
+    # Configuration du niveau de log
+    spark.sparkContext.setLogLevel("ERROR")
+
+    input_path = "data/education/fr-en-etablissements-fermes.csv"
+    output_folder = "data/education/output"
 
     # Extraction des données
-    df = extract_data(input_path)
+    df = extract_data(spark, input_path)
     
     # Profilage des données
     profile_data(df)
@@ -29,242 +47,169 @@ def main():
     # Calcul du nombre d'établissements fermés par année et par département
     df_grouped = calculate_closed_by_year_and_dept(df_transformed)
     
-    # Vous pouvez sauvegarder ce DataFrame agrégé dans un fichier CSV si besoin
+    # Chargement des données
     load_data(df_grouped, "data/education/output_grouped")
-    
-    # Chargement des données transformées
     load_data(df_transformed, output_folder)
 
-def extract_data(input_path: str) -> pd.DataFrame:
+    # Arrêt de la session Spark
+    spark.stop()
+
+def extract_data(spark: SparkSession, input_path: str):
     """
-    Extrait les données depuis un fichier CSV.
-    
-    :param input_path: Chemin vers le CSV source
-    :return: DataFrame contenant les données extraites
+    Extrait les données depuis un fichier CSV avec PySpark.
     """
-    # Vérification de l'existence du fichier
     if not os.path.exists(input_path):
         print(f"Erreur: Le fichier {input_path} n'existe pas.")
-        return pd.DataFrame()
+        return None
     
     try:
-        # D'abord, on lit les premières lignes pour vérifier le format
-        with open(input_path, 'r', encoding='utf-8') as f:
-            header = f.readline().strip().split(';')
-            print(f"✓ En-têtes détectés: {', '.join(header)}")
-            print(f"✓ Nombre de colonnes attendu: {len(header)}")
-            
-            # Vérification des premières lignes
-            for i, line in enumerate(f, 2):
-                if i <= 5:  # On vérifie les 5 premières lignes
-                    fields = line.strip().split(';')
-                    if len(fields) != len(header):
-                        print(f"⚠️ Attention: Incohérence dans le nombre de colonnes à la ligne {i}")
-                        print(f"  Colonnes attendues: {len(header)}, Colonnes trouvées: {len(fields)}")
-                        print(f"  Ligne problématique: {line.strip()}")
-        
-        # Chargement du CSV avec gestion des erreurs
-        df = pd.read_csv(input_path, 
-                        header=0,
-                        encoding='utf-8',
-                        sep=';',
-                        on_bad_lines='warn')  # Affiche un avertissement pour les lignes problématiques
+        # Lecture du CSV avec PySpark
+        df = spark.read \
+            .option("header", "true") \
+            .option("sep", ";") \
+            .option("encoding", "UTF-8") \
+            .csv(input_path)
         
         print(f"✓ Données chargées avec succès depuis {input_path}")
-        print(f"✓ Nombre de lignes: {len(df)}")
+        print(f"✓ Nombre de lignes: {df.count()}")
         print(f"✓ Colonnes présentes: {', '.join(df.columns)}")
+        
+        return df
         
     except Exception as e:
         print(f"❌ Erreur lors du chargement du fichier CSV : {str(e)}")
-        print("Vérifiez que le fichier est bien formaté et que toutes les lignes ont le même nombre de colonnes.")
-        return pd.DataFrame()
-    
-    return df
+        return None
 
-def profile_data(df: pd.DataFrame):
+def profile_data(df):
     """
-    Effectue un profilage détaillé du DataFrame et propose des suggestions de conversion.
+    Effectue un profilage détaillé du DataFrame Spark.
     """
     print("\n=== Profilage du DataFrame ===\n")
     
-    # 1. Affichage du schéma inféré
+    # Schéma du DataFrame
     print("Schéma du DataFrame :")
-    print(df.dtypes)
+    df.printSchema()
     
-    # 2. Aperçu des premières lignes
+    # Aperçu des données
     print("\nAperçu des 5 premières lignes :")
-    print(df.head(5))
+    df.show(5, truncate=False)
     
-    # 3. Statistiques descriptives
+    # Statistiques descriptives
     print("\nStatistiques descriptives :")
-    print(df.describe(include='all'))
+    df.describe().show()
     
-    # 4. Nombre total de lignes
-    total_rows = len(df)
+    # Nombre total de lignes
+    total_rows = df.count()
     print(f"\nNombre total de lignes : {total_rows}")
     
-    # 5. Analyse des valeurs manquantes pour chaque colonne
+    # Analyse des valeurs nulles
     print("\n--- Analyse des valeurs manquantes ---")
     for column in df.columns:
-        missing = df[column].isna().sum()
-        missing_percent = (missing / total_rows) * 100
-        print(f"Colonne '{column}': {missing} valeurs manquantes ({missing_percent:.2f}%)")
-    
-    # 6. Distribution pour les colonnes catégorielles (exemple: "etat")
-    if "etat" in df.columns:
-        print("\nDistribution des valeurs pour la colonne 'etat' :")
-        print(df["etat"].value_counts().head(10))
-    
-    # 7. Suggestions de conversion et nettoyage
-    print("\n=== Suggestions de conversion et nettoyage ===")
-    
-    # Exemples de suggestions basées sur un schéma courant d'établissements :
-    if "date_fermeture" in df.columns:
-        print("- 'date_fermeture' : Convertir en type Date avec pd.to_datetime().")
-        
-    if "code_postal" in df.columns:
-        print("- 'code_postal' : Conserver en String pour préserver les zéros initiaux.")
-        
-    # Pour les colonnes textuelles, uniformiser la casse et nettoyer les espaces
-    text_columns = df.select_dtypes(include=['object']).columns
-    if len(text_columns) > 0:
-        print(f"- Colonnes textuelles {list(text_columns)} : Appliquer str.strip() et str.lower() pour uniformiser.")
-    
-    print("- Vérifier et convertir les colonnes numériques au besoin.")
-    
-    print("\nCe profilage vous permettra d'adapter ensuite les transformations en fonction des spécificités de votre jeu de données.")
+        null_count = df.filter(col(column).isNull()).count()
+        null_percent = (null_count / total_rows) * 100
+        print(f"Colonne '{column}': {null_count} valeurs manquantes ({null_percent:.2f}%)")
 
-
-def transform_data(df: pd.DataFrame) -> pd.DataFrame:
+def transform_data(df):
     """
-    Transforme et nettoie les données.
-    
-    :param df: DataFrame issu de l'extraction
-    :return: DataFrame transformé et nettoyé
+    Transforme et nettoie les données avec PySpark.
     """
     print("\n=== TRANSFORMATION ET NETTOYAGE DES DONNÉES ===")
     
     # 1. Suppression des doublons
-    initial_count = len(df)
-    df = df.drop_duplicates()
-    print(f"Suppression des doublons: {initial_count - len(df)} lignes supprimées")
+    df = df.dropDuplicates()
     
-    # 2. Standardisation des colonnes textuelles (pour 'nom', 'adresse', 'ville', 'etat', etc.)
-    text_columns = df.select_dtypes(include='object').columns
-    for column in text_columns:
-        # Appliquer trim et conversion en minuscules
-        df[column] = df[column].astype(str).str.strip().str.lower()
+    # 2. Standardisation des colonnes textuelles
+    for column in df.columns:
+        df = df.withColumn(column, 
+                          when(col(column).isNotNull(),
+                               trim(lower(col(column))))
+                          .otherwise(lit("non spécifié")))
     
-    # 3. Gestion des valeurs manquantes pour les colonnes textuelles
-    for column in text_columns:
-        # Remplacer les chaînes vides ou "nan" par "non spécifié"
-        df[column] = df[column].replace("nan", "").replace("", None)
-        df[column] = df[column].fillna("non spécifié")
-    
-    # 4. Conversion de la colonne 'date_fermeture' en format date et extraction de l'année
+    # 3. Conversion de la date_fermeture et extraction de l'année
     if "date_fermeture" in df.columns:
-        df["date_fermeture"] = pd.to_datetime(df["date_fermeture"], format="%Y-%m-%d", errors="coerce")
-        df["annee_fermeture"] = df["date_fermeture"].dt.year
+        df = df.withColumn("date_fermeture", 
+                          col("date_fermeture").cast(DateType()))
+        df = df.withColumn("annee_fermeture", 
+                          year(col("date_fermeture")))
     
-    # 5. Normalisation des codes postaux
+    # 4. Normalisation des codes postaux
     if "code_postal" in df.columns:
-        df["code_postal"] = df["code_postal"].astype(str).str.strip()
-        df["code_postal"] = df["code_postal"].replace("nan", "").replace("", None)
-        df["code_postal"] = df["code_postal"].fillna("00000")
+        df = df.withColumn("code_postal",
+                          when(col("code_postal").isNull(), "00000")
+                          .otherwise(trim(col("code_postal"))))
     
-    # 6. Filtrage sur la colonne "etat" pour ne garder que les établissements fermés
-    if "etat" in df.columns:
-        df = df[df["etat"] == "fermé"]
-        print(f"Filtrage des établissements fermés: {len(df)} lignes conservées")
+    # 5. Séparation du secteur public/privé
+    if "secteur_public_prive_libe" in df.columns:
+        df = df.withColumn("secteur_public", 
+                          when(lower(col("secteur_public_prive_libe")) == "public", 1)
+                          .otherwise(0))
+        df = df.withColumn("secteur_prive", 
+                          when(lower(col("secteur_public_prive_libe")) == "privé", 1)
+                          .otherwise(0))
     
     print("\n--- Aperçu des données nettoyées ---")
-    print(df.head(5))
+    df.show(5)
     
     return df
 
-def load_data(df: pd.DataFrame, output_folder: str):
+def calculate_closed_by_year_and_dept(df):
     """
-    Charge le DataFrame transformé dans un fichier CSV de sortie.
-    
-    :param df: DataFrame transformé
-    :param output_folder: Chemin du dossier de sortie
-    """
-    # Création du dossier de sortie s'il n'existe pas
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-    else:
-        print(f"Le dossier de sortie {output_folder} existe déjà. Les données seront écrasées.")
-    
-    output_path = os.path.join(output_folder, "data_transformed.csv")
-    try:
-        df.to_csv(output_path, index=False, sep=';', encoding='utf-8')
-        print(f"✓ Données sauvegardées dans {output_path} avec le séparateur point-virgule (;)")
-    except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde des données : {e}")
-
-
-def calculate_closed_by_year_and_dept(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calcule le nombre d'établissements fermés par année et par département.
-    
-    :param df: DataFrame transformé contenant les colonnes 'annee_fermeture' et 'code_departement'
-    :return: DataFrame agrégé avec le nombre d'établissements fermés par année et département
+    Calcule les statistiques par année et département avec PySpark.
     """
     if "annee_fermeture" not in df.columns:
         print("❌ La colonne 'annee_fermeture' est manquante.")
-        return pd.DataFrame()
+        return None
 
-    # Utiliser le code_departement directement
-    df['departement'] = df['code_departement']
-    
-    # Statistiques générales sur les fermetures
+    # Statistiques générales
     print("\n=== Statistiques sur les fermetures d'établissements ===")
-    print(f"Période couverte : de {df['annee_fermeture'].min()} à {df['annee_fermeture'].max()}")
-    
-    # Top 5 des années avec le plus de fermetures
-    yearly_counts = df['annee_fermeture'].value_counts().sort_index()
-    print("\nTop 5 des années avec le plus de fermetures :")
-    print(yearly_counts.sort_values(ascending=False).head())
-    
-    # Création du DataFrame groupé avec statistiques séparées par secteur
-    df_grouped = (
-        df.groupby(["annee_fermeture", "departement"])
-          .agg({
-              'numero_uai': 'count',
-              'libelle_departement': 'first',
-              'secteur_public_prive_libe': lambda x: {
-                  'nb_public': sum(x.str.lower() == 'public'),
-                  'nb_prive': sum(x.str.lower() == 'privé'),
-                  'pct_public': round(sum(x.str.lower() == 'public') * 100 / len(x), 2),
-                  'pct_prive': round(sum(x.str.lower() == 'privé') * 100 / len(x), 2)
-              }
-          })
-          .reset_index()
-    )
-    
-    # Décomposer le dictionnaire en colonnes
-    df_grouped[['nb_public', 'nb_prive', 'pct_public', 'pct_prive']] = pd.DataFrame(
-        df_grouped['secteur_public_prive_libe'].tolist(), 
-        index=df_grouped.index
-    )
-    
-    # Supprimer la colonne dictionnaire
-    df_grouped = df_grouped.drop('secteur_public_prive_libe', axis=1)
-    
-    # Renommage des colonnes
-    df_grouped = df_grouped.rename(columns={
-        'numero_uai': 'nombre_total_etablissements',
-        'libelle_departement': 'nom_departement'
-    })
-    
-    # Tri par année et département
-    df_grouped = df_grouped.sort_values(['annee_fermeture', 'departement'])
-    
+    df.agg({"annee_fermeture": "min"}).show()
+    df.agg({"annee_fermeture": "max"}).show()
+
+    # Groupement par année et département
+    df_grouped = df.groupBy("annee_fermeture", "code_departement", "libelle_departement") \
+        .agg(
+            count("numero_uai").alias("nombre_total_etablissements"),
+            sum("secteur_public").alias("nb_public"),
+            sum("secteur_prive").alias("nb_prive"),
+            round((sum("secteur_public") * 100 / count("*")), 2).alias("pct_public"),
+            round((sum("secteur_prive") * 100 / count("*")), 2).alias("pct_prive")
+        ) \
+        .orderBy("annee_fermeture", "code_departement")
+
     print("\nAperçu des statistiques par département et année :")
-    print(df_grouped.head(10))
+    df_grouped.show(10)
     
     return df_grouped
 
+def load_data(df, output_folder):
+    """
+    Sauvegarde le DataFrame Spark en un seul fichier CSV.
+    """
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    
+    try:
+        # Utilisation de coalesce(1) pour forcer la sortie en un seul fichier
+        (df.coalesce(1)
+           .write
+           .mode("overwrite")  # Écrase les fichiers existants
+           .option("header", "true")
+           .option("sep", ";")
+           .option("encoding", "UTF-8")
+           .format("csv")  # Spécifie explicitement le format
+           .save(output_folder))
+        
+        # Renommer le fichier part-* en data_transformed.csv
+        for filename in os.listdir(output_folder):
+            if filename.startswith("part-") and filename.endswith(".csv"):
+                old_file = os.path.join(output_folder, filename)
+                new_file = os.path.join(output_folder, "data_transformed.csv")
+                os.rename(old_file, new_file)
+                break
+                
+        print(f"✓ Données sauvegardées dans {output_folder}/data_transformed.csv avec le séparateur point-virgule (;)")
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde des données : {e}")
 
 if __name__ == "__main__":
     main()
