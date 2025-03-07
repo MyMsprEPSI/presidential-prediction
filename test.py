@@ -8,6 +8,7 @@ from pyspark.sql.functions import (
 )
 import re
 import glob
+import sys
 
 # Création de la session Spark
 spark = SparkSession.builder.appName("PresidentSummary") \
@@ -107,107 +108,146 @@ spark = SparkSession.builder.appName("PresidentSummary") \
 
 
 
-
-
-
-def process_election_df(df, year, dept_col_candidates):
-    """
-    Traite un DataFrame d'élection en :
-      - ajoutant la colonne 'annee' avec la valeur year
-      - renommant la colonne de département sélectionnée en 'code_dept'
-      - unpivotant les colonnes de votes (toutes les colonnes non clés)
-      - agrégant les voix par (annee, code_dept, candidat)
-      - sélectionnant le candidat avec le maximum de voix par département (pour l'année)
-    
-    dept_col_candidates : liste de noms possibles pour la colonne département.
-    """
-    # Ajout de la colonne annee
-    df = df.withColumn("annee", F.lit(year))
-    
-    # Déterminer la colonne à utiliser pour le code département
-    dept_col = None
-    for col in dept_col_candidates:
-        if col in df.columns:
-            dept_col = col
-            break
-    if not dept_col:
-        print(f"Le DataFrame pour l'année {year} ne contient pas de colonne de département parmi {dept_col_candidates}")
-        return None
-    
-    # Renommage en 'code_dept' pour uniformiser
-    df = df.withColumnRenamed(dept_col, "code_dept")
-    
-    # Définir les colonnes clés que l'on ne souhaite pas unpivoter
-    key_columns = {"code_dept", "annee", "Inscrits", "Votants", "Exprimés", "Blancs et nuls"}
-    candidate_columns = [c for c in df.columns if c not in key_columns]
-    if len(candidate_columns) == 0:
-        print(f"Aucune colonne candidat trouvée pour l'année {year}.")
-        return None
-
-    # Construction de l'expression STACK pour unpivot
-    expr_parts = []
-    for col in candidate_columns:
-        # Chaque colonne candidate sera traitée comme vote (cast en int)
-        expr_parts.append(f"'{col}', cast(`{col}` as int)")
-    stack_expr = f"stack({len(candidate_columns)}, {', '.join(expr_parts)}) as (candidat, voix)"
-    
-    # Unpivot : on conserve annee, code_dept et on applique stack pour obtenir candidat et voix
-    df_unpivot = df.select("annee", "code_dept", F.expr(stack_expr))
-    
-    # Agrégation des voix par département, candidat et année
-    df_agg = df_unpivot.groupBy("annee", "code_dept", "candidat") \
-                       .agg(F.sum("voix").alias("total_voix"))
-    
-    # Sélection du gagnant pour chaque (annee, code_dept)
-    windowSpec = Window.partitionBy("annee", "code_dept").orderBy(F.desc("total_voix"))
-    df_winner = df_agg.withColumn("rank", F.row_number().over(windowSpec)) \
-                      .filter(F.col("rank") == 1)
-    
-    return df_winner.select("annee", "code_dept", F.col("candidat").alias("gagnant"), "total_voix")
-
-# Liste des noms de colonnes pouvant contenir le code département (selon vos fichiers Excel)
-dept_col_candidates = ["Code département", "Département"]
-
-# Lecture du fichier 2017 (format .xls) via spark-excel
-df_2017 = spark.read.format("com.crealytics.spark.excel") \
+# ------------------------------------------------------------------------------
+# 2. Traitement du fichier 2017
+# ------------------------------------------------------------------------------
+# Lecture du fichier 2017 via Spark-Excel  
+# On utilise sheetName (ou dataAddress si vous devez spécifier une plage)
+df_2017_raw = spark.read.format("com.crealytics.spark.excel") \
     .option("header", "true") \
     .option("inferSchema", "true") \
-    .option("dataAddress", "'Circo. Leg. Tour 2'!A1") \
+    .option("dataAddress", "'Départements Tour 2'!A3:Z1000") \
     .load("./data/politique/taux-votes/2017/Presidentielle_2017_Resultats_Tour_2_c.xls")
 
-# Lecture du fichier 2022 (format .xlsx) via spark-excel
-df_2022 = spark.read.format("com.crealytics.spark.excel") \
+print("=== Colonnes détectées pour 2017 ===")
+print(df_2017_raw.columns)
+df_2017_raw.show(5, truncate=False)
+
+# Création des colonnes candidates en se basant sur la structure du fichier 2017  
+# On suppose que pour chaque département, le premier candidat est défini par
+# Nom17, Prénom18, Voix19 et le second par Nom23, Prénom24, Voix25.
+df_2017 = df_2017_raw.withColumnRenamed("Code du département", "code_dept") \
+    .withColumn("candidat1", F.concat(F.col("Nom17"), F.lit(" "), F.col("Prénom18"))) \
+    .withColumn("candidat2", F.concat(F.col("Nom23"), F.lit(" "), F.col("Prénom24"))) \
+    .select(F.col("code_dept").cast("string"), 
+            F.col("Voix19").alias("voix1").cast("int"), 
+            F.col("Voix25").alias("voix2").cast("int"),
+            "candidat1", "candidat2")
+
+# On crée un DataFrame par candidat
+df_2017_candidate1 = df_2017.select("code_dept", 
+                                    F.col("candidat1").alias("candidat"), 
+                                    F.col("voix1").alias("voix"))
+df_2017_candidate2 = df_2017.select("code_dept", 
+                                    F.col("candidat2").alias("candidat"), 
+                                    F.col("voix2").alias("voix"))
+# Union des deux candidats
+df_2017_norm = df_2017_candidate1.union(df_2017_candidate2) \
+                    .withColumn("annee", F.lit("2017"))
+
+# Pour chaque département, on garde le candidat avec le maximum de voix
+w_dept = Window.partitionBy("annee", "code_dept").orderBy(F.desc("voix"))
+df_2017_final = df_2017_norm.withColumn("rank", F.row_number().over(w_dept)) \
+                    .filter(F.col("rank") == 1) \
+                    .select("annee", "code_dept", "candidat", "voix")
+
+# ------------------------------------------------------------------------------
+# 3. Traitement du fichier 2022
+# ------------------------------------------------------------------------------
+# Lecture du fichier 2022 via Spark-Excel  
+df_2022_raw = spark.read.format("com.crealytics.spark.excel") \
     .option("header", "true") \
     .option("inferSchema", "true") \
-    .option("dataAddress", "'Résultats par niveau BurVot T2'!A1") \
-    .load("./data/politique/taux-votes/2022/resultats-par-niveau-burvot-t2-france-entiere.xlsx")
+    .option("sheetName", "Résultats") \
+    .load("./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx")
 
-# Traitement de chaque DataFrame
-df_2017_processed = process_election_df(df_2017, "2017", dept_col_candidates)
-df_2022_processed = process_election_df(df_2022, "2022", dept_col_candidates)
+print("=== Colonnes détectées pour 2022 ===")
+print(df_2022_raw.columns)
+df_2022_raw.show(5, truncate=False)
 
-if df_2017_processed is None or df_2022_processed is None:
-    print("Erreur lors du traitement de l'un des fichiers.")
-    sys.exit(1)
+# Pour 2022, on suppose que chaque ligne correspond déjà à un candidat,
+# avec "Code du département", "Nom", "Prénom" et "Voix".
+df_2022 = df_2022_raw.withColumnRenamed("Code du département", "code_dept") \
+    .withColumn("candidat", F.concat(F.col("Nom"), F.lit(" "), F.col("Prénom"))) \
+    .select(F.col("code_dept").cast("string"), "candidat", F.col("Voix").alias("voix")) \
+    .withColumn("annee", F.lit("2022"))
 
-# Union des résultats des deux années
-df_final = df_2017_processed.union(df_2022_processed)
-df_final.show(truncate=False)
+# On agrège par département pour sélectionner le candidat gagnant (le plus de voix)
+w_dept_2022 = Window.partitionBy("annee", "code_dept").orderBy(F.desc("voix"))
+df_2022_final = df_2022.withColumn("rank", F.row_number().over(w_dept_2022)) \
+    .filter(F.col("rank") == 1) \
+    .select("annee", "code_dept", "candidat", "voix")
 
-# Sauvegarde du résultat dans un unique fichier CSV (dans un dossier)
-df_final.coalesce(1) \
-    .write \
-    .option("header", "true") \
-    .mode("overwrite") \
-    .csv("/mnt/data/president_2017_2022_excel")
+# ------------------------------------------------------------------------------
+# 4. Union des résultats et écriture du CSV final
+# ------------------------------------------------------------------------------
 
-print("Le CSV final a été sauvegardé dans le dossier /mnt/data/president_2017_2022_excel")
+# Ce dictionnaire unifie à la fois les codes "ZA", "ZB" etc. et les codes numériques
+# (971, 972, etc.) pour avoir un seul libellé final (ex. "Guadeloupe").
+# Ajoutez ou modifiez selon votre besoin.
+dept_mapping = {
+    # Guadeloupe
+    "ZA": "Guadeloupe", "971": "Guadeloupe",
+    # Martinique
+    "ZB": "Martinique", "972": "Martinique",
+    # Guyane
+    "ZC": "Guyane", "973": "Guyane",
+    # La Réunion
+    "ZD": "La Réunion", "974": "La Réunion",
+    # Mayotte
+    "ZM": "Mayotte", "976": "Mayotte",
+    # Nouvelle-Calédonie
+    "ZN": "Nouvelle-Calédonie", "988": "Nouvelle-Calédonie",
+    # Polynésie française
+    "ZP": "Polynésie française", "987": "Polynésie française",
+    # Saint-Pierre-et-Miquelon
+    "ZS": "Saint-Pierre-et-Miquelon", "975": "Saint-Pierre-et-Miquelon",
+    # Saint-Martin/Saint-Barthélemy
+    "ZX": "Saint-Martin/Saint-Barthélemy",
+    # Wallis et Futuna
+    "ZW": "Wallis et Futuna", "986": "Wallis et Futuna",
+    # Français établis hors de France
+    "ZZ": "Français établis hors de France", "99": "Français établis hors de France",
+    # Corse
+    "2A": "Corse-du-Sud",
+    "2B": "Haute-Corse"
+    # Ajoutez d'autres mappings si besoin
+}
+
+df_final = df_2017_final.union(df_2022_final)
+
+# 1) Convertir voix en int (si ce n'est pas déjà fait)
+df_final = df_final.withColumn("voix", F.col("voix").cast("int"))
+
+# ------------------------------------------------------------------------------
+# 3. Créer une UDF pour remplacer code_dept par le libellé final
+# ------------------------------------------------------------------------------
+@F.udf(returnType=StringType())
+def unify_dept_code(code):
+    if code is None:
+        return None
+    # Supprimer la terminaison .0 s'il y en a (ex. "1.0" -> "1")
+    code_str = code.replace(".0", "")
+    # Normaliser un seul chiffre en 2 chiffres (ex. "1" -> "01")
+    if code_str.isdigit() and len(code_str) == 1:
+        code_str = f"0{code_str}"
+    # Retourner le libellé final si présent dans dept_mapping
+    return dept_mapping.get(code_str, code_str)
+
+df_final = df_final.withColumn("code_dept", unify_dept_code(F.col("code_dept")))
 
 
 
+# Vous pouvez ensuite afficher ou sauvegarder ce DataFrame
+df_final.show(500,truncate=False)
 
+# Écriture en un fichier CSV unique (le dossier contiendra un fichier part-0000*.csv)
+# df_final.coalesce(1) \
+#     .write \
+#     .option("header", "true") \
+#     .mode("overwrite") \
+#     .csv("./data/politique/taux-votes/president_2017_2022_excel")
 
-
+# print("Le CSV final a été sauvegardé dans ./data/politique/taux-votes/president_2017_2022_excel")
 
 spark.stop()
-
