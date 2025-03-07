@@ -25,9 +25,9 @@ class DataTransformer:
         """
         Transforme les données environnementales :
         - Sélectionne uniquement les colonnes nécessaires
-        - Remplace les valeurs vides par NULL dans les colonnes "Parc installé éolien (MW)" et "Parc installé solaire (MW)"
-        - Ajoute deux colonnes indicatrices "eolien_missing" et "solaire_missing" pour identifier les valeurs manquantes.
-        - Regroupe les données par Code_INSEE_région et Année
+        - Remplace les valeurs vides par 0.0 pour les valeurs manquantes d'éolien et solaire
+        - Ajoute les données de l'année 2000 pour chaque région avec des valeurs à 0.0
+        - Regroupe les données par Code_INSEE_région et Année (somme en cas de doublons)
         - Trie les résultats par région et année
         """
 
@@ -37,46 +37,40 @@ class DataTransformer:
 
         logger.info("🚀 Transformation des données environnementales en cours...")
 
-        # Sélection des colonnes nécessaires
+        # Sélection des colonnes nécessaires et cast des valeurs
         df_transformed = df_env.select(
             col("Année").cast("int"),
-            col("Code_INSEE_région"),
+            col("Code_INSEE_Région"),
             col("Parc_installé_éolien_MW").cast("double"),
             col("Parc_installé_solaire_MW").cast("double"),
         )
 
-        # Remplacement des valeurs nulles par 0
-        df_transformed = df_transformed.withColumn(
-            "Parc_installé_éolien_MW",
-            when(
-                col("Parc_installé_éolien_MW").isNull()
-                | isnan(col("Parc_installé_éolien_MW")),
-                lit(0),
-            ).otherwise(col("Parc_installé_éolien_MW")),
-        )
+        # Remplacement des valeurs nulles par 0.0
+        df_transformed = df_transformed.fillna({"Parc_installé_éolien_MW": 0.0, "Parc_installé_solaire_MW": 0.0})
 
-        df_transformed = df_transformed.withColumn(
-            "Parc_installé_solaire_MW",
-            when(
-                col("Parc_installé_solaire_MW").isNull()
-                | isnan(col("Parc_installé_solaire_MW")),
-                lit(0),
-            ).otherwise(col("Parc_installé_solaire_MW")),
-        )
-
-        # Groupement par Code_INSEE_région et Année (somme des valeurs en cas de doublons)
-        df_grouped = df_transformed.groupBy("Code_INSEE_région", "Année").agg(
+        # Regroupement par région et année pour sommer les valeurs en cas de doublons
+        df_grouped = df_transformed.groupBy("Code_INSEE_Région", "Année").agg(
             spark_sum("Parc_installé_éolien_MW").alias("Parc_installé_éolien_MW"),
             spark_sum("Parc_installé_solaire_MW").alias("Parc_installé_solaire_MW"),
         )
 
-        # Tri des données par Code_INSEE_région et Année
-        df_final = df_grouped.orderBy("Code_INSEE_région", "Année")
+        # Récupération des régions uniques présentes dans les données
+        regions = df_grouped.select("Code_INSEE_Région").distinct()
+
+        # Création d'un DataFrame contenant l'année 2000 pour chaque région avec valeurs à 0.0
+        df_year_2000 = regions.withColumn("Année", lit(2000)).withColumn("Parc_installé_éolien_MW", lit(0.0)).withColumn("Parc_installé_solaire_MW", lit(0.0))
+
+        # Ajout des données de l'année 2000 au DataFrame principal
+        df_final = df_grouped.union(df_year_2000)
+
+        # Tri des données par région et année
+        df_final = df_final.orderBy("Code_INSEE_Région", "Année")
 
         logger.info("✅ Transformation terminée ! Aperçu des données transformées :")
         df_final.show(15, truncate=False)
 
         return df_final
+
 
     def transform_pib_outre_mer(self, df_pib, region_codes):
         """
