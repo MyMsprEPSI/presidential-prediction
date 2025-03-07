@@ -1,9 +1,10 @@
 # transform.py
 
 import logging
-from pyspark.sql.functions import col, when, lit, isnan, sum as spark_sum
+from pyspark.sql.functions import col, when, lit, isnan, sum as spark_sum, round
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
+
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -231,3 +232,68 @@ class DataTransformer:
         df_final.show(10, truncate=False)
 
         return df_final
+    
+    def transform_inflation_data(self, df_inflation):
+        """
+        Transforme les données d'inflation en filtrant les années et en les triant.
+
+        :param df_inflation: DataFrame PySpark contenant les données brutes d'inflation.
+        :return: DataFrame PySpark nettoyé et trié.
+        """
+        if df_inflation is None:
+            logger.error("❌ Le DataFrame inflation est vide ou invalide.")
+            return None
+
+        logger.info("🚀 Transformation des données d'inflation en cours...")
+
+        # Filtrer et trier les données
+        df_transformed = df_inflation.orderBy("Année")
+
+        logger.info("✅ Transformation des données d'inflation réussie :")
+        df_transformed.show(10, truncate=False)
+
+        return df_transformed
+
+
+
+
+    def combine_pib_and_inflation(self, df_pib, df_inflation):
+        """
+        Combine les données PIB et Inflation, et calcule le ratio PIB_par_inflation avec arrondi à 2 décimales.
+
+        :param df_pib: DataFrame PySpark contenant le PIB par région.
+        :param df_inflation: DataFrame PySpark contenant l'inflation nationale.
+        :return: DataFrame PySpark combiné avec le calcul du PIB ajusté par l'inflation.
+        """
+        if df_pib is None or df_inflation is None:
+            logger.error("❌ L'un des DataFrames est vide. Impossible de les combiner.")
+            return None
+
+        logger.info("🚀 Fusion des données PIB et Inflation...")
+
+        # Joindre PIB et Inflation sur la colonne Année
+        df_combined = df_pib.join(df_inflation, "Année", "left")
+
+        # Utiliser le bon nom de colonne pour l'inflation et arrondir à 2 décimales
+        df_combined = df_combined.withColumn(
+            "Évolution_des_prix_à_la_consommation", round(col("Évolution_des_prix_à_la_consommation"), 2)
+        )
+
+        df_combined = df_combined.withColumn(
+            "PIB_par_inflation",
+            round(
+                col("PIB_en_euros_par_habitant") / (1 + col("Évolution_des_prix_à_la_consommation") / 100), 2
+            )
+        )
+
+        # Trier les résultats
+        df_combined = df_combined.orderBy("Code_INSEE_Région", "Année")
+
+        logger.info("✅ Fusion des données PIB et Inflation réussie :")
+        df_combined.show(10, truncate=False)
+
+        return df_combined
+
+
+
+

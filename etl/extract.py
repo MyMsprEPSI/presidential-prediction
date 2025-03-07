@@ -211,6 +211,58 @@ class DataExtractor:
         )
 
         return df_cleaned
+    
+
+
+    def extract_inflation_data(self, excel_path):
+        """
+        Extrait les données d'inflation depuis le fichier Excel.
+
+        :param excel_path: Chemin du fichier Excel contenant les données d'inflation.
+        :return: DataFrame PySpark contenant les données d'inflation filtrées de 2000 à 2022.
+        """
+        if not os.path.exists(excel_path):
+            logger.error(f"❌ Fichier non trouvé : {excel_path}")
+            return None
+
+        logger.info(f"📥 Extraction des données d'inflation depuis : {excel_path}")
+
+        # Définition du schéma explicitement pour correspondre à la ligne d'en-tête effective
+        schema = StructType([
+            StructField("Année", IntegerType(), True),
+            StructField("Évolution des prix à la consommation", DoubleType(), True),
+        ])
+
+        try:
+            # On spécifie la feuille et la cellule de départ (ici A4, supposé contenir les en-têtes)
+            df = (
+                self.spark.read.format("com.crealytics.spark.excel")
+                .option("header", "true")
+                .option("sheetName", "Question 1")
+                .option("dataAddress", "'Question 1'!A4")
+                .schema(schema)
+                .load(excel_path)
+            )
+
+            # Pour plus de sécurité, renomme la colonne afin de supprimer les espaces
+            df = df.withColumnRenamed("Évolution des prix à la consommation", "Évolution_des_prix_à_la_consommation")
+
+            logger.info(f"🛠️ Colonnes après extraction et renommage : {df.columns}")
+
+            # Filtrer les années de 2000 à 2022
+            df_filtered = df.filter((col("Année") >= 2000) & (col("Année") <= 2022))
+
+            logger.info("✅ Extraction des données d'inflation réussie :")
+            df_filtered.show(10, truncate=False)
+
+            return df_filtered
+
+        except Exception as e:
+            logger.error(f"❌ Erreur extraction Excel inflation : {str(e)}")
+            return None
+
+
+
 
     def stop(self):
         """
