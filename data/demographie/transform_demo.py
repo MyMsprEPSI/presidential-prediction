@@ -61,21 +61,27 @@ spark = SparkSession.builder.appName("Traitement_Population").getOrCreate()
 df_spark = spark.read.option("header", True).option("sep", ";").csv(file_csv)
 
 # Renommer les colonnes avec les bons en-têtes
-df_spark = df_spark.withColumnRenamed("F 0-19 ans", "F_0_19_ans")\
-    .withColumnRenamed("F 20-39 ans", "F_20_39_ans")\
-    .withColumnRenamed("F 40-59 ans", "F_40_59_ans")\
-    .withColumnRenamed("F 60-74 ans", "F_60_74_ans")\
-    .withColumnRenamed("F 75 ans et plus", "F_75_et_plus")\
-    .withColumnRenamed("F Total", "F_Total")\
-    .withColumnRenamed("H 0-19 ans", "H_0_19_ans")\
-    .withColumnRenamed("H 20-39 ans", "H_20_39_ans")\
-    .withColumnRenamed("H 40-59 ans", "H_40_59_ans")\
-    .withColumnRenamed("H 60-74 ans", "H_60_74_ans")\
-    .withColumnRenamed("H 75 ans et plus", "H_75_et_plus")\
-    .withColumnRenamed("H Total", "H_Total")\
-    .withColumnRenamed("Total", "Population_Totale")
+df_spark = df_spark.withColumnRenamed("0-19 ans", "E_0_19_ans")\
+    .withColumnRenamed("20-39 ans", "E_20_39_ans")\
+    .withColumnRenamed("40-59 ans", "E_40_59_ans")\
+    .withColumnRenamed("60-74 ans", "E_60_74_ans")\
+    .withColumnRenamed("75 ans et plus", "E_75_et_plus")\
+    .withColumnRenamed("Total", "E_Total")\
+    .withColumnRenamed("F_0-19 ans", "F_0_19_ans")\
+    .withColumnRenamed("F_20-39 ans", "F_20_39_ans")\
+    .withColumnRenamed("F_40-59 ans", "F_40_59_ans")\
+    .withColumnRenamed("F_60-74 ans", "F_60_74_ans")\
+    .withColumnRenamed("F_75 ans et plus", "F_75_et_plus")\
+    .withColumnRenamed("F_Total", "F_Total")\
+    .withColumnRenamed("H_0-19 ans", "H_0_19_ans")\
+    .withColumnRenamed("H_20-39 ans", "H_20_39_ans")\
+    .withColumnRenamed("H_40-59 ans", "H_40_59_ans")\
+    .withColumnRenamed("H_60-74 ans", "H_60_74_ans")\
+    .withColumnRenamed("H_75 ans et plus", "H_75_et_plus")\
+    .withColumnRenamed("H_Total", "H_Total")\
+    .withColumnRenamed("Total.1", "Population_Totale")
 
-# Supprimer la 2ème ligne (les intitulés en double) et les lignes de source/notes
+# Supprimer les lignes de source/notes
 df_spark = df_spark.where(
     (~col("Code_Département").startswith("Source")) &
     (~col("Code_Département").startswith("NB:")) &
@@ -90,8 +96,14 @@ df_spark = df_spark.withColumn(
     .otherwise(col("Code_Département").cast("int"))
 )
 
-# Trier par année (décroissant) puis par code département
-df_spark = df_spark.orderBy(col("Année").desc(), "Code_Département_Num")
+# Réorganiser les colonnes dans l'ordre souhaité
+df_spark = df_spark.select(
+    "Code_Département", "Nom_Département",
+    "E_0_19_ans", "E_20_39_ans", "E_40_59_ans", "E_60_74_ans", "E_75_et_plus", "E_Total",
+    "F_0_19_ans", "F_20_39_ans", "F_40_59_ans", "F_60_74_ans", "F_75_et_plus", "F_Total",
+    "H_0_19_ans", "H_20_39_ans", "H_40_59_ans", "H_60_74_ans", "H_75_et_plus", "H_Total",
+    "Année", "Code_Département_Num"
+)
 
 # Séparer les totaux France Métro et DOM-TOM
 df_totaux = df_spark.filter(
@@ -101,6 +113,10 @@ df_totaux = df_spark.filter(
 # Filtrer les départements uniquement
 df_departements = df_spark.subtract(df_totaux)
 
+# Trier par année (décroissant) puis par code département
+df_departements = df_departements.orderBy(col("Année").desc(), "Code_Département_Num")
+df_totaux = df_totaux.orderBy(col("Année").desc(), "Code_Département_Num")
+
 # 🔹 Écraser les anciens fichiers
 dir_departements = "D:/Thomas/Documents/GitHub/bigdata-project/data/demographie/population_par_departement_spark"
 dir_totaux = "D:/Thomas/Documents/GitHub/bigdata-project/data/demographie/population_totaux_spark"
@@ -108,8 +124,9 @@ dir_totaux = "D:/Thomas/Documents/GitHub/bigdata-project/data/demographie/popula
 shutil.rmtree(dir_departements, ignore_errors=True)
 shutil.rmtree(dir_totaux, ignore_errors=True)
 
-df_departements.write.option("header", True).option("sep", ";").mode("overwrite").csv(dir_departements)
-df_totaux.write.option("header", True).option("sep", ";").mode("overwrite").csv(dir_totaux)
+# Écrire les fichiers avec les en-têtes
+df_departements.coalesce(1).write.option("header", True).option("sep", ";").mode("overwrite").csv(dir_departements)
+df_totaux.coalesce(1).write.option("header", True).option("sep", ";").mode("overwrite").csv(dir_totaux)
 
 # 🔹 Fusion des fichiers en un seul CSV propre 🔹
 file_departements = "D:/Thomas/Documents/GitHub/bigdata-project/data/demographie/population_par_departement_spark.csv"
@@ -125,16 +142,19 @@ overwrite_file(file_totaux)
 
 def merge_spark_output(spark_output_dir, output_file):
     """ Fusionne les fichiers Spark en un seul CSV """
+    headers = "Code_Département;Nom_Département;E_0_19_ans;E_20_39_ans;E_40_59_ans;E_60_74_ans;E_75_et_plus;E_Total;F_0_19_ans;F_20_39_ans;F_40_59_ans;F_60_74_ans;F_75_et_plus;F_Total;H_0_19_ans;H_20_39_ans;H_40_59_ans;H_60_74_ans;H_75_et_plus;H_Total;Année;Code_Département_Num\n"
+    
     with open(output_file, "w", encoding="utf-8") as outfile:
-        for i, part_file in enumerate(sorted(os.listdir(spark_output_dir))):
+        # Écrire les en-têtes
+        outfile.write(headers)
+        
+        # Puis écrire les données
+        for part_file in sorted(os.listdir(spark_output_dir)):
             part_path = os.path.join(spark_output_dir, part_file)
             if part_file.startswith("part-"):  # Ignorer les fichiers _SUCCESS
                 with open(part_path, "r", encoding="utf-8") as infile:
-                    if i == 0:  # Garde l'en-tête du premier fichier uniquement
-                        outfile.write(infile.read())
-                    else:
-                        infile.readline()  # Supprime la première ligne (header)
-                        outfile.write(infile.read())
+                    next(infile)  # Sauter l'en-tête du fichier partiel
+                    outfile.write(infile.read())
 
     shutil.rmtree(spark_output_dir)  # Supprime les fichiers intermédiaires
 
@@ -143,5 +163,31 @@ merge_spark_output(dir_departements, file_departements)
 merge_spark_output(dir_totaux, file_totaux)
 
 print(f"✅ Traitement terminé :\n - {file_departements} (données par département)\n - {file_totaux} (totaux France)")
+
+# Convertir en pandas pour l'écriture
+df_departements_pd = df_departements.toPandas()
+df_totaux_pd = df_totaux.toPandas()
+
+# Créer un dictionnaire de correspondance pour les codes et noms
+code_mapping = {
+    "France métropolitaine": {"code": "FRM", "nom": "France métropolitaine"},
+    "DOM": {"code": "DOM", "nom": "Départements d'Outre-Mer"},
+    "France métropolitaine et DOM": {"code": "FMD", "nom": "France métropolitaine et DOM"}
+}
+
+# Nettoyer les espaces dans la colonne Code_Département
+df_totaux_pd["Code_Département"] = df_totaux_pd["Code_Département"].str.strip()
+
+# Ajouter la colonne Type et remplacer les libellés par les codes
+df_totaux_pd.insert(0, "Type", ["Métropole" if x == "France métropolitaine" else "Métropole + DOM" if x == "France métropolitaine et DOM" else "DOM" for x in df_totaux_pd["Code_Département"]])
+
+# Mettre à jour les codes et noms
+df_totaux_pd["Nom_Département"] = df_totaux_pd["Code_Département"].map(lambda x: code_mapping[x]["nom"])
+df_totaux_pd["Code_Département"] = df_totaux_pd["Code_Département"].map(lambda x: code_mapping[x]["code"])
+
+# Écrire les fichiers CSV
+print("💾 Écriture des fichiers CSV...")
+df_departements_pd.to_csv(file_departements, sep=";", index=False)
+df_totaux_pd.to_csv(file_totaux, sep=";", index=False)
 
 spark.stop()
