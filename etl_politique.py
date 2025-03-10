@@ -6,6 +6,7 @@ from pyspark.sql.functions import (
     concat_ws, concat , split , regexp_replace , lower,
     trim , upper , coalesce, collect_list
 )
+import pandas as pd
 import re
 import glob
 import sys
@@ -281,22 +282,17 @@ df_final = df_final.withColumn("voix", F.col("voix").cast("int"))
 # 3. Renommer la colonne "voix" en "total_voix"
 df_final = df_final.withColumnRenamed("voix", "total_voix")
 
-# Vous pouvez ensuite afficher ou sauvegarder ce DataFrame
-df_final.show(500,truncate=False)
-
-
+# 4. Sélection des colonnes d'intérêt
 final_df = final_df.select("annee", "code_dept", "candidat", "total_voix")
 
+# 5. Union des deux DataFrames
 df_final_csv = df_final.union(final_df)
 
+# Affichage des données finales
 df_final_csv.show(500,truncate=False)
 
-# Sauvegarde du DataFrame en CSV
-df_final_csv.coalesce(1) \
-    .write \
-    .option("header", "true") \
-    .mode("overwrite") \
-    .csv("./data/politique/votes_presidentielle_par_departement_1965_2022")
+# Ecriture de toutes les données dans un fichier CSV avec un seul fichier de sortie Pandas
+df_final_csv.toPandas().to_csv("./data/politique/vote_presidentiel_par_dept_1965_2022.csv", index=False, header=True)
 
 # Fermeture de la session Spark
 spark.stop()
