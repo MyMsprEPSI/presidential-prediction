@@ -7,5 +7,4 @@ pandas
 black
 scikit-learn
 openpyxl
-spark-excel
 ipykernel

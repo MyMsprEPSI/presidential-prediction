@@ -19,10 +19,12 @@ def main():
     - Transformation
     - Enregistrement en CSV
     """
+    logger.info("🚀 Démarrage du processus ETL")
 
     # ----------------------------------------------------------------
     # 1) Définition des chemins
     # ----------------------------------------------------------------
+    logger.info("📁 Configuration des chemins de fichiers...")
     input_file_path = (
         "./data/environnemental/parc-regional-annuel-prod-eolien-solaire.csv"
     )
@@ -268,4 +270,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+        logger.info("✅ Processus ETL terminé avec succès")
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de l'exécution du processus ETL : {str(e)}")
+        raise

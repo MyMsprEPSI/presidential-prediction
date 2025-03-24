@@ -15,16 +15,16 @@ from pyspark.sql.functions import (
     lpad,
 )
 from pyspark.sql.window import Window
-from pyspark.sql import functions as F , types as T
+from pyspark.sql import functions as F, types as T
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
 
 
 # Configuration du logger
-logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+logger = logging.getLogger(__name__)
 
 
 class DataTransformer:
@@ -33,6 +33,7 @@ class DataTransformer:
     """
 
     def __init__(self):
+        logger.info("🚀 Initialisation du DataTransformer")
         pass
 
     def transform_environmental_data(self, df_env):
@@ -316,11 +317,7 @@ class DataTransformer:
 
     def transform_technologie_data(self, df):
         """
-        Transforme les données de technologie :
-        - Renomme les colonnes
-        - Convertit les types
-        - Nettoie les valeurs d'années
-        - Arrondit les pourcentages
+        Transforme les données de technologie.
 
         :param df: DataFrame PySpark brut
         :return: DataFrame PySpark transformé
@@ -332,37 +329,48 @@ class DataTransformer:
         logger.info("🚀 Transformation des données de technologie en cours...")
 
         try:
-            # Sélection et renommage des colonnes
-            df_transformed = df.select(
-                col("_c0").alias("annee").cast("string"),
-                col("DIRD/PIB  France")
-                .alias("dird_pib_france_pourcentages")
-                .cast("float"),
-            )
-
-            # Arrondir les pourcentages à 2 décimales
-            df_transformed = df_transformed.withColumn(
-                "dird_pib_france_pourcentages",
-                round(col("dird_pib_france_pourcentages"), 2),
-            )
-
-            # Nettoyer les années
-            df_transformed = df_transformed.withColumn(
-                "annee", regexp_replace("annee", "\.0", "")
-            )
-
-            # Remplacer NaN par 2023
-            df_transformed = df_transformed.withColumn(
-                "annee", when(col("annee") == "NaN", "2023").otherwise(col("annee"))
-            )
-
-            logger.info("✅ Transformation des données de technologie réussie")
-            return df_transformed
-
+            return self._extracted_from_transform_technologie_data_15(df)
         except Exception as e:
             logger.error(f"❌ Erreur lors de la transformation des données : {str(e)}")
             return None
 
+    # TODO Rename this here and in `transform_technologie_data`
+    def _extracted_from_transform_technologie_data_15(self, df):
+        df_transformed = self._select_and_rename_columns(df)
+        df_transformed = self._round_percentages(df_transformed)
+        df_transformed = self._clean_years(df_transformed)
+        df_transformed = self._replace_nan_year(df_transformed)
+
+        logger.info("✅ Transformation des données de technologie réussie")
+        return df_transformed
+
+    def _select_and_rename_columns(self, df):
+        """Sélectionne et renomme les colonnes."""
+        return df.select(
+            col("_c0").alias("annee").cast("string"),
+            col("DIRD/PIB  France")
+            .alias("dird_pib_france_pourcentages")
+            .cast("float"),
+        )
+
+    def _round_percentages(self, df):
+        """Arrondit les pourcentages à 2 décimales."""
+        return df.withColumn(
+            "dird_pib_france_pourcentages",
+            round(col("dird_pib_france_pourcentages"), 2),
+        )
+
+    def _clean_years(self, df):
+        """Nettoie les années en supprimant '.0'."""
+        return df.withColumn("annee", regexp_replace("annee", "\.0", ""))
+
+    def _replace_nan_year(self, df):
+        """Remplace les valeurs 'NaN' dans la colonne 'annee' par '2023'."""
+        return df.withColumn(
+            "annee", when(col("annee") == "NaN", "2023").otherwise(col("annee"))
+        )
+        
+        
     def transform_election_data_1965_2012(self, list_df):
         """
         Transforme et agrège les fichiers CSV 1965-2012.
@@ -381,9 +389,17 @@ class DataTransformer:
         for df in list_df:
             # Colonnes clés (à ne pas unpivoter)
             key_columns = {
-                "Code département", "Code département0", "Code département1",
-                "département", "circonscription", "Inscrits", "Votants",
-                "Exprimés", "Blancs et nuls", "filename", "annee"
+                "Code département",
+                "Code département0",
+                "Code département1",
+                "département",
+                "circonscription",
+                "Inscrits",
+                "Votants",
+                "Exprimés",
+                "Blancs et nuls",
+                "filename",
+                "annee",
             }
 
             # Détermine la bonne colonne de département
@@ -410,25 +426,26 @@ class DataTransformer:
 
             # Unpivot
             df_unpivot = df.select(
-                "annee",
-                F.col(dept_col).alias("code_dept"),
-                F.expr(expr)
+                "annee", F.col(dept_col).alias("code_dept"), F.expr(expr)
             )
 
             # Agrégation par département / candidat / année
-            df_agg = df_unpivot.groupBy("annee", "code_dept", "candidat") \
-                               .agg(F.sum("voix").alias("total_voix"))
+            df_agg = df_unpivot.groupBy("annee", "code_dept", "candidat").agg(
+                F.sum("voix").alias("total_voix")
+            )
 
             # Sélection du gagnant par dept + année
-            windowSpec = Window.partitionBy("annee", "code_dept").orderBy(F.desc("total_voix"))
-            df_winner = df_agg.withColumn("rank", F.row_number().over(windowSpec)) \
-                              .filter(F.col("rank") == 1)
+            windowSpec = Window.partitionBy("annee", "code_dept").orderBy(
+                F.desc("total_voix")
+            )
+            df_winner = df_agg.withColumn(
+                "rank", F.row_number().over(windowSpec)
+            ).filter(F.col("rank") == 1)
 
             # Nettoyage du nom du candidat
             df_winner = df_winner.withColumn("gagnant", F.col("candidat"))
             df_winner = df_winner.withColumn(
-                "gagnant",
-                F.trim(F.regexp_replace(F.col("gagnant"), r"\([^)]*\)", ""))
+                "gagnant", F.trim(F.regexp_replace(F.col("gagnant"), r"\([^)]*\)", ""))
             )
             df_winner = df_winner.withColumn(
                 "gagnant",
@@ -444,16 +461,18 @@ class DataTransformer:
                 .when(F.col("gagnant") == "HOLLANDE", "François HOLLANDE")
                 .when(F.col("gagnant") == "MACRON", "Emmanuel MACRON")
                 .when(F.col("gagnant") == "LE PEN", "Marine LE PEN")
-                .otherwise(F.col("gagnant"))
+                .otherwise(F.col("gagnant")),
             )
 
             # Sélection colonnes finales
-            results.append(df_winner.select(
-                "annee",
-                "code_dept",
-                F.col("gagnant").alias("candidat"),
-                "total_voix"
-            ))
+            results.append(
+                df_winner.select(
+                    "annee",
+                    "code_dept",
+                    F.col("gagnant").alias("candidat"),
+                    "total_voix",
+                )
+            )
 
         # Union de tous les résultats
         if results:
@@ -462,12 +481,17 @@ class DataTransformer:
                 final_df = final_df.union(df_r)
 
             # Normalisation du code_dept (ex: passer '1' -> '01')
-            final_df = final_df.withColumn(
-                "code_dept_norm",
-                F.when(F.col("code_dept").rlike("^[0-9]$"), F.lpad(F.col("code_dept"), 2, "0"))
-                 .otherwise(F.col("code_dept"))
-            ).drop("code_dept") \
-             .withColumnRenamed("code_dept_norm", "code_dept")
+            final_df = (
+                final_df.withColumn(
+                    "code_dept_norm",
+                    F.when(
+                        F.col("code_dept").rlike("^[0-9]$"),
+                        F.lpad(F.col("code_dept"), 2, "0"),
+                    ).otherwise(F.col("code_dept")),
+                )
+                .drop("code_dept")
+                .withColumnRenamed("code_dept_norm", "code_dept")
+            )
 
             return final_df
 
@@ -479,42 +503,49 @@ class DataTransformer:
         """
         Transforme le fichier Excel 2017 :
         - Sélection du candidat gagnant par département
-        - Nettoyage (codes spéciaux pour régions d’outre-mer)
+        - Nettoyage (codes spéciaux pour régions d outre-mer)
         """
         if df_2017_raw is None:
             logger.warning("DataFrame 2017 vide.")
             return None
 
-        df_2017 = df_2017_raw.withColumnRenamed("Code du département", "code_dept") \
-            .withColumn("candidat1", F.concat(F.col("Nom17"), F.lit(" "), F.col("Prénom18"))) \
-            .withColumn("candidat2", F.concat(F.col("Nom23"), F.lit(" "), F.col("Prénom24"))) \
-            .select(F.col("code_dept").cast("string"),
-                    F.col("Libellé du département"),
-                    F.col("Voix19").alias("voix1").cast("int"), 
-                    F.col("Voix25").alias("voix2").cast("int"),
-                    "candidat1", "candidat2"
+        df_2017 = (
+            df_2017_raw.withColumnRenamed("Code du département", "code_dept")
+            .withColumn(
+                "candidat1", F.concat(F.col("Nom17"), F.lit(" "), F.col("Prénom18"))
             )
-
+            .withColumn(
+                "candidat2", F.concat(F.col("Nom23"), F.lit(" "), F.col("Prénom24"))
+            )
+            .select(
+                F.col("code_dept").cast("string"),
+                F.col("Libellé du département"),
+                F.col("Voix19").alias("voix1").cast("int"),
+                F.col("Voix25").alias("voix2").cast("int"),
+                "candidat1",
+                "candidat2",
+            )
+        )
 
         # On crée un DataFrame par candidat
-        df_2017_candidate1 = df_2017.select("code_dept", 
-                                            F.col("candidat1").alias("candidat"), 
-                                            F.col("voix1").alias("voix"),
-                                            F.col("Libellé du département")
-                                            )
+        df_2017_candidate1 = df_2017.select(
+            "code_dept",
+            F.col("candidat1").alias("candidat"),
+            F.col("voix1").alias("voix"),
+            F.col("Libellé du département"),
+        )
 
-
-        df_2017_candidate2 = df_2017.select("code_dept", 
-                                            F.col("candidat2").alias("candidat"), 
-                                            F.col("voix2").alias("voix"),
-                                            F.col("Libellé du département")
-                                            )
-
+        df_2017_candidate2 = df_2017.select(
+            "code_dept",
+            F.col("candidat2").alias("candidat"),
+            F.col("voix2").alias("voix"),
+            F.col("Libellé du département"),
+        )
 
         # Union des deux candidats
-        df_2017_norm = df_2017_candidate1.union(df_2017_candidate2) \
-                            .withColumn("annee", F.lit("2017"))
-
+        df_2017_norm = df_2017_candidate1.union(df_2017_candidate2).withColumn(
+            "annee", F.lit("2017")
+        )
 
         # 1. Appliquer le mapping pour les codes spéciaux et la Corse
         df_2017_norm = df_2017_norm.withColumn(
@@ -527,41 +558,45 @@ class DataTransformer:
             .when(F.col("Libellé du département") == "Nouvelle-Calédonie", "ZN")
             .when(F.col("Libellé du département") == "Polynésie française", "ZP")
             .when(F.col("Libellé du département") == "Saint-Pierre-et-Miquelon", "ZS")
-            .when(F.col("Libellé du département") == "Saint-Martin/Saint-Barthélemy", "ZX")
+            .when(
+                F.col("Libellé du département") == "Saint-Martin/Saint-Barthélemy", "ZX"
+            )
             .when(F.col("Libellé du département") == "Wallis et Futuna", "ZW")
-            .when(F.col("Libellé du département") == "Français établis hors de France", "ZZ")
+            .when(
+                F.col("Libellé du département") == "Français établis hors de France",
+                "ZZ",
+            )
             .when(F.col("Libellé du département") == "Corse-du-Sud", "2A")
             .when(F.col("Libellé du département") == "Haute-Corse", "2B")
-            .otherwise(F.col("code_dept"))
+            .otherwise(F.col("code_dept")),
         )
 
         # 1. Supprimer la terminaison ".0" dans la colonne "code_dept_norm"
         df_final_2017 = df_2017_norm.withColumn(
-            "code_dept_final",
-            F.regexp_replace(F.col("code_dept_norm"), r"\.0$", "")
+            "code_dept_final", F.regexp_replace(F.col("code_dept_norm"), r"\.0$", "")
         )
 
         # 2. (Optionnel) Si vous souhaitez que les codes sur un seul chiffre soient affichés sur 2 chiffres (ex. "1" -> "01")
         df_final_2017 = df_final_2017.withColumn(
             "code_dept_final",
-            F.when(F.col("code_dept_final").rlike("^[0-9]$"),
-                F.lpad(F.col("code_dept_final"), 2, "0"))
-            .otherwise(F.col("code_dept_final"))
+            F.when(
+                F.col("code_dept_final").rlike("^[0-9]$"),
+                F.lpad(F.col("code_dept_final"), 2, "0"),
+            ).otherwise(F.col("code_dept_final")),
         )
 
         # 3. Supprimer les colonnes intermédiaires et renommer la colonne finale en "code_dept"
-        df_final_2017 = df_final_2017.drop("code_dept", "code_dept_norm", "Libellé du département") \
-                        .withColumnRenamed("code_dept_final", "code_dept")
-
-
+        df_final_2017 = df_final_2017.drop(
+            "code_dept", "code_dept_norm", "Libellé du département"
+        ).withColumnRenamed("code_dept_final", "code_dept")
 
         # Pour chaque département, on garde le candidat avec le maximum de voix
         w_dept = Window.partitionBy("annee", "code_dept").orderBy(F.desc("voix"))
-        df_2017_final = df_final_2017.withColumn("rank", F.row_number().over(w_dept)) \
-                            .filter(F.col("rank") == 1) \
-                            .select("annee", "code_dept", "candidat", "voix")
-
-
+        df_2017_final = (
+            df_final_2017.withColumn("rank", F.row_number().over(w_dept))
+            .filter(F.col("rank") == 1)
+            .select("annee", "code_dept", "candidat", "voix")
+        )
 
         return df_2017_final
 
@@ -575,28 +610,25 @@ class DataTransformer:
             logger.warning("DataFrame 2022 vide.")
             return None
 
-        df_2022 = df_2022_raw.withColumnRenamed("Code du département", "code_dept") \
-            .withColumn("candidat", F.concat(F.col("Nom"), F.lit(" "), F.col("Prénom"))) \
+        # Pour 2022, on suppose que chaque ligne correspond déjà à un candidat,
+        # avec "Code du département", "Nom", "Prénom" et "Voix".
+        df_2022 = (
+            df_2022_raw.withColumnRenamed("Code du département", "code_dept")
+            .withColumn("candidat", F.concat(F.col("Nom"), F.lit(" "), F.col("Prénom")))
             .select(
                 F.col("code_dept").cast("string"),
                 "candidat",
-                F.col("Voix").alias("voix").cast("int")
-            ) \
+                F.col("Voix").alias("voix"),
+            )
             .withColumn("annee", F.lit("2022"))
+        )
 
         # On agrège par département pour sélectionner le candidat gagnant (le plus de voix)
         w_dept_2022 = Window.partitionBy("annee", "code_dept").orderBy(F.desc("voix"))
-        df_2022_final = df_2022.withColumn("rank", F.row_number().over(w_dept_2022)) \
-            .filter(F.col("rank") == 1) \
+        df_2022_final = (
+            df_2022.withColumn("rank", F.row_number().over(w_dept_2022))
+            .filter(F.col("rank") == 1)
             .select("annee", "code_dept", "candidat", "voix")
-
-
-        # Normalisation (ex: "MACRON Emmanuel" -> "Emmanuel MACRON")
-        df_2022_final = df_2022_final.withColumn(
-            "candidat",
-            F.when(F.col("candidat") == "MACRON Emmanuel", "Emmanuel MACRON")
-             .when(F.col("candidat") == "LE PEN Marine", "Marine LE PEN")
-             .otherwise(F.col("candidat"))
         )
 
         return df_2022_final
@@ -612,41 +644,49 @@ class DataTransformer:
 
         import pyspark.sql.functions as F
 
-        # Commence avec les DF non-nuls
-        dfs = []
-        if df_1965_2012 is not None:
-            dfs.append(df_1965_2012)
-        if df_2017 is not None:
-            dfs.append(df_2017)
-        if df_2022 is not None:
-            dfs.append(df_2022)
+        # Union 2017 et 2022
+        df_final = df_2017.union(df_2022)
 
-        # Union
-        df_final = dfs[0]
-        for i in range(1, len(dfs)):
-            df_final = df_final.union(dfs[i])
-
-        # Mapping final des codes DOM-TOM
+        # 1. Appliquer le mapping pour les codes spéciaux
         df_final = df_final.withColumn(
             "code_dept",
             F.when(F.col("code_dept") == "ZA", "971")
-             .when(F.col("code_dept") == "ZB", "972")
-             .when(F.col("code_dept") == "ZC", "973")
-             .when(F.col("code_dept") == "ZD", "974")
-             .when(F.col("code_dept") == "ZM", "976")
-             .when(F.col("code_dept") == "ZN", "988")
-             .when(F.col("code_dept") == "ZP", "987")
-             .when(F.col("code_dept") == "ZS", "975")
-             .when(F.col("code_dept") == "ZX", "971")  # Saint-Martin/Saint-Barthélemy
-             .when(F.col("code_dept") == "ZW", "986")
-             .when(F.col("code_dept") == "ZZ", "99")
-             .otherwise(F.col("code_dept"))
+            .when(F.col("code_dept") == "ZB", "972")
+            .when(F.col("code_dept") == "ZC", "973")
+            .when(F.col("code_dept") == "ZD", "974")
+            .when(F.col("code_dept") == "ZM", "976")
+            .when(F.col("code_dept") == "ZN", "988")
+            .when(F.col("code_dept") == "ZP", "987")
+            .when(F.col("code_dept") == "ZS", "975")
+            .when(F.col("code_dept") == "ZX", "971")
+            .when(F.col("code_dept") == "ZW", "986")
+            .when(F.col("code_dept") == "ZZ", "99")
+            .otherwise(F.col("code_dept")),
         )
 
-        # Juste s'assurer du type int pour total_voix
-        df_final = df_final.withColumn("total_voix", F.col("total_voix").cast("int"))
+        # 1.1 Normalisation des candidats avec prénom et nom
+        df_final = df_final.withColumn(
+            "candidat",
+            F.when(F.col("candidat") == "MACRON Emmanuel", "Emmanuel MACRON").when(
+                F.col("candidat") == "LE PEN Marine", "Marine LE PEN"
+            ),
+        )
+
+        # 2. Appliquer le format int pour les voix
+        df_final = df_final.withColumn("voix", F.col("voix").cast("int"))
+
+        # 3. Renommer la colonne "voix" en "total_voix"
+        df_final = df_final.withColumnRenamed("voix", "total_voix")
+
+        # 4. Sélection des colonnes d'intérêt
+        df_1965_2012 = df_1965_2012.select(
+            "annee", "code_dept", "candidat", "total_voix"
+        )
+
+        # 5. Union des deux DataFrames
+        df_final_csv = df_final.union(df_1965_2012)
 
         # Tri final
-        df_final = df_final.orderBy("annee", "code_dept")
+        df_final_csv = df_final_csv.orderBy("annee", "code_dept")
 
-        return df_final
+        return df_final_csv
