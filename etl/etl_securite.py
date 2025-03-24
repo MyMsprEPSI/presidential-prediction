@@ -1,43 +1,79 @@
+import os
+import pandas as pd
 from pyspark.sql import SparkSession
+
+# Définir les chemins de fichiers
+file_csv = r"C:\Users\joyce\EPSI\MSPR\Bloc3\MSPR\datas\Securite\donnee-dep-data.gouv-2024-geographie2024-produit-le2025-01-26.csv"
+file_excel = r"C:\Users\joyce\EPSI\MSPR\Bloc3\MSPR\datas\Securite\nombre_homicide.xlsx"
+
+# Vérifier si les fichiers existent
+for file in [file_csv, file_excel]:
+    if not os.path.exists(file):
+        raise FileNotFoundError(f"Fichier introuvable : {file}")
+
+# Charger les fichiers avec Pandas
+df_csv = pd.read_csv(file_csv, encoding='utf-8')
+df_excel = pd.read_excel(file_excel, engine='openpyxl')
+
+# Afficher un aperçu
+print(" Aperçu du fichier CSV :")
+print(df_csv.head())
+
+print("Aperçu du fichier Excel :")
+print(df_excel.head())
+
+# Fusionner les fichiers avec Pandas (ajuste selon la colonne commune)
+merged_df = pd.merge(df_csv, df_excel, on="id", how="inner")
+
+# Sauvegarder le fichier fusionné en CSV
+output_file = r"C:\Users\joyce\EPSI\MSPR\Bloc3\MSPR\datas\Securite\donnees_fusionnees.csv"
+merged_df.to_csv(output_file, index=False, encoding='utf-8')
+
+print(f"\n Fichier fusionné enregistré : {output_file}")
+
+# ===============================================
+# OPTION 2 : Nettoyage ETL avec Spark
+# ===============================================
 
 # Initialiser une session Spark
 spark = SparkSession.builder \
-    .appName("ETL Process with PySpark") \
+    .appName("nombre_de_condamnation_homicide") \
     .getOrCreate()
 
-def extract_data(file_path, file_type='csv'):
-    if file_type == 'csv':
-        return spark.read.csv(file_path, header=True, inferSchema=True, sep=';')
-    elif file_type == 'parquet':
-        return spark.read.parquet(file_path)
-    else:
-        raise ValueError("Unsupported file type")
+# Définir les fichiers pour Spark
+file_spark_1 = r"C:\Users\joyce\OneDrive\Desktop\donnee-dep-data.gouv-2024-geographie2024-produit-le2025-01-26.csv"
+file_spark_2 = r"C:\Users\joyce\OneDrive\Desktop\nombre_homicide.csv"
 
-def transform_data(df):
-    # Exemple de transformation : filtrer les lignes avec des valeurs nulles
-    if 'code_region' in df.columns:
-        df = df.drop('code_region')
+# Vérifier si les fichiers existent
+for file in [file_spark_1, file_spark_2]:
+    if not os.path.exists(file):
+        raise FileNotFoundError(f"Fichier introuvable pour Spark : {file}")
 
-    df_cleaned = df.dropna()
-    return df_cleaned
+# Lire les fichiers avec Spark
+df1 = spark.read.csv(file_spark_1, header=True, inferSchema=True)
+df2 = spark.read.csv(file_spark_2, header=True, inferSchema=True)
 
-def load_data(df, output_path):
-    df.write.csv(output_path, header=True)
-    print(f"Data successfully loaded to {output_path}")
+# Afficher les schémas pour vérifier les colonnes
+print("\n Schéma du fichier CSV 1 :")
+df1.printSchema()
 
-def main():
-    # Chemins des fichiers d'entrée et de sortie
-    input_file_path = 'c:/Users/joyce/EPSI/MSPR/Bloc 3/MSPR/datas/Securite/nombre_de_condamnation_homicide.csv'  # Remplacez par votre chemin
-    output_file_path = 'c:/Users/joyce/EPSI/MSPR/Bloc 3/MSPR/datas/Securite/'  # Remplacez par votre chemin
+print("\n Schéma du fichier CSV 2 :")
+df2.printSchema()
 
-    # Extraction
-    data = extract_data(input_file_path, file_type='csv')
+# Fusionner les DataFrames sur les colonnes communes
+merged_df = df1.join(df2, on=["Code_departement", "Code_region", "annee", "indicateur", "unite_de_compte", "nombre"], how="inner")
 
-    # Transformation
-    transformed_data = transform_data(data)
+# Nettoyage : Supprimer les valeurs nulles
+merged_df = merged_df.dropna()
 
-    # Chargement
-    load_data(transformed_data, output_file_path)
+# Nettoyage : Supprimer les doublons
+merged_df = merged_df.dropDuplicates()
 
-if __name__ == "__main__":
-    main()
+# Sauvegarder le DataFrame fusionné en CSV
+output_spark = r"C:\Users\joyce\OneDrive\Desktop\nombre_de_condamnation_homicide.csv"
+merged_df.write.csv(output_spark, header=True, mode="overwrite")
+
+print(f"\n Fichier Spark nettoyé enregistré : {output_spark}")
+
+# Arrêter Spark
+spark.stop()
