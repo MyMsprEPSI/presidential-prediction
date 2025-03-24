@@ -427,6 +427,14 @@ class DataExtractor:
                     df_union = df_union.union(df_sheet)
             
             df_union.show(10, truncate=False)
+            
+            # Génération du CSV pour vérification
+            output_csv_path = "./data/demographie/output1/demographic_data_verification.csv"
+            # Création du répertoire si inexistant
+            os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
+            logger.info(f"💾 Génération du CSV de vérification: {output_csv_path}")
+            df_union.write.mode("overwrite").option("header", "true").csv(output_csv_path)
+            logger.info(f"✅ CSV généré avec succès")
 
             return df_union
 
