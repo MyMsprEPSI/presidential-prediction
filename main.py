@@ -60,7 +60,7 @@ def main():
     )
     election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
 
-    demographie_file = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
+    demo_file = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
     #education_file = "./data/education/fr-en-etablissements-fermes.csv"
 
     # ----------------------------------------------------------------
@@ -139,8 +139,8 @@ def main():
     # ----------------------------------------------------------------
     # 3.6) EXTRACT : Charger les données de démographie
     # ----------------------------------------------------------------
-
-
+    df_demographie = extractor.extract_demographic_data(demo_file)
+    df_demographie.show(10, truncate=False)
     # ----------------------------------------------------------------
     # 3.7) EXTRACT : Charger les données d'éducation
     # ----------------------------------------------------------------
