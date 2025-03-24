@@ -60,6 +60,9 @@ def main():
     )
     election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
 
+    demographie_file = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
+    #education_file = "./data/education/fr-en-etablissements-fermes.csv"
+
     # ----------------------------------------------------------------
     # 2) Initialisation des objets ETL
     # ----------------------------------------------------------------
@@ -132,6 +135,29 @@ def main():
     )
     df_election_2017 = extractor.extract_election_data_2017(election_2017_file)
     df_election_2022 = extractor.extract_election_data_2022(election_2022_file)
+
+    # ----------------------------------------------------------------
+    # 3.6) EXTRACT : Charger les données de démographie
+    # ----------------------------------------------------------------
+
+
+    # ----------------------------------------------------------------
+    # 3.7) EXTRACT : Charger les données d'éducation
+    # ----------------------------------------------------------------
+
+
+    # ----------------------------------------------------------------
+    # 3.8) EXTRACT : Charger les données de sécurité
+    # ----------------------------------------------------------------
+
+
+    # ----------------------------------------------------------------
+    # 3.9) EXTRACT : Charger les données de santé
+    # ----------------------------------------------------------------
+
+
+
+
 
     # ----------------------------------------------------------------
     # 4) TRANSFORM : Nettoyage et sélection des données : environnementales
@@ -246,6 +272,30 @@ def main():
 
     logger.info("✅ Transformation des données électorales réussie !")
     df_election_final.show(10, truncate=False)
+
+    # ----------------------------------------------------------------
+    # 4.6) EXTRACT : Charger les données de démographie
+    # ----------------------------------------------------------------
+
+
+    # ----------------------------------------------------------------
+    # 4.7) EXTRACT : Charger les données d'éducation
+    # ----------------------------------------------------------------
+
+
+    # ----------------------------------------------------------------
+    # 4.8) EXTRACT : Charger les données de sécurité
+    # ----------------------------------------------------------------
+
+
+    # ----------------------------------------------------------------
+    # 4.9) EXTRACT : Charger les données de santé
+    # ----------------------------------------------------------------
+
+
+
+
+
 
     # ----------------------------------------------------------------
     # 5) LOAD : Sauvegarde en fichier CSV
