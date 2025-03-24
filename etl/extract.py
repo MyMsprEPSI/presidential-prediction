@@ -10,7 +10,8 @@ from pyspark.sql.types import (
     StringType,
     DoubleType,
 )
-from pyspark.sql.functions import col, lit
+from pyspark.sql.functions import col, lit, regexp_extract
+import glob
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -37,6 +38,10 @@ class DataExtractor:
                 "./database/connector/mysql-connector-j-9.1.0.jar;./database/connector/spark-excel_2.12-3.5.0_0.20.3.jar",
             )
             .config("spark.hadoop.fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
+            .config("spark.driver.memory", "8g")
+            .config("spark.executor.memory", "8g")
+            .config("spark.memory.offHeap.enabled", "true")
+            .config("spark.memory.offHeap.size", "8g")
             .getOrCreate()
         )
 
@@ -207,12 +212,10 @@ class DataExtractor:
         df_cleaned = df_raw.select(
             col("Code_INSEE_Région"),
             lit(2022).alias("Année"),
-            col("PIB_en_euros_par_habitant")
+            col("PIB_en_euros_par_habitant"),
         )
 
         return df_cleaned
-    
-
 
     def extract_inflation_data(self, excel_path):
         """
@@ -228,10 +231,12 @@ class DataExtractor:
         logger.info(f"📥 Extraction des données d'inflation depuis : {excel_path}")
 
         # Définition du schéma explicitement pour correspondre à la ligne d'en-tête effective
-        schema = StructType([
-            StructField("Année", IntegerType(), True),
-            StructField("Évolution des prix à la consommation", DoubleType(), True),
-        ])
+        schema = StructType(
+            [
+                StructField("Année", IntegerType(), True),
+                StructField("Évolution des prix à la consommation", DoubleType(), True),
+            ]
+        )
 
         try:
             # On spécifie la feuille et la cellule de départ (ici A4, supposé contenir les en-têtes)
@@ -245,7 +250,10 @@ class DataExtractor:
             )
 
             # Pour plus de sécurité, renomme la colonne afin de supprimer les espaces
-            df = df.withColumnRenamed("Évolution des prix à la consommation", "Évolution_des_prix_à_la_consommation")
+            df = df.withColumnRenamed(
+                "Évolution des prix à la consommation",
+                "Évolution_des_prix_à_la_consommation",
+            )
 
             logger.info(f"🛠️ Colonnes après extraction et renommage : {df.columns}")
 
@@ -261,8 +269,107 @@ class DataExtractor:
             logger.error(f"❌ Erreur extraction Excel inflation : {str(e)}")
             return None
 
+    def extract_technologie_data(self, excel_path):
+        """
+        Extrait les données de technologie depuis le fichier Excel.
 
+        :param excel_path: Chemin du fichier Excel contenant les données de technologie
+        :return: DataFrame PySpark contenant les données brutes
+        """
+        if not os.path.exists(excel_path):
+            logger.error(f"❌ Fichier non trouvé : {excel_path}")
+            return None
 
+        logger.info(f"📥 Extraction des données de technologie depuis : {excel_path}")
+
+        try:
+            df = (
+                self.spark.read.format("com.crealytics.spark.excel")
+                .option("header", "true")
+                .option("inferSchema", "true")
+                .option("dataAddress", "'Tableau 1'!A3:B37")
+                .load(excel_path)
+            )
+
+            logger.info("✅ Extraction des données de technologie réussie")
+            return df
+
+        except Exception as e:
+            logger.error(
+                f"❌ Erreur lors de l'extraction des données de technologie : {str(e)}"
+            )
+            return None
+
+    def extract_election_data_1965_2012(self, file_pattern):
+        """
+        Extrait les données électorales des fichiers CSV de 1965 à 2012.
+
+        :param file_pattern: Motif des fichiers CSV à traiter (glob)
+        :return: Liste de DataFrames PySpark contenant les données brutes
+        """
+        logger.info(f"📥 Extraction des données électorales 1965-2012 depuis : {file_pattern}")
+        file_list = glob.glob(file_pattern)
+        results = []
+
+        for file_path in file_list:
+            try:
+                # Lecture du fichier CSV avec en-tête et schéma inféré
+                df = (
+                    self.spark.read.option("header", "true")
+                    .option("inferSchema", "true")
+                    .csv(file_path)
+                )
+
+                # Ajout des colonnes année et nom de fichier
+                df = df.withColumn("filename", lit(file_path))
+                df = df.withColumn(
+                    "annee", regexp_extract("filename", r"presi(\d{4})", 1)
+                )
+
+                results.append(df)
+            except Exception as e:
+                logger.error(f"❌ Erreur lors de l'extraction du fichier {file_path}: {str(e)}")
+                continue
+
+        if not results:
+            logger.warning("Aucun fichier CSV trouvé pour 1965-2012.")
+            return None
+
+        return results
+
+    def extract_election_data_2017(self, excel_file):
+        """
+        Extrait les données électorales du fichier Excel 2017.
+        """
+        logger.info(f"📥 Extraction des données électorales 2017 : {excel_file}")
+        try:
+            return (
+                self.spark.read.format("com.crealytics.spark.excel")
+                .option("header", "true")
+                .option("inferSchema", "true")
+                .option("dataAddress", "'Départements Tour 2'!A3:Z115")
+                .load(excel_file)
+            )
+        except Exception as e:
+            logger.error(f"❌ Erreur extraction 2017 : {str(e)}")
+            return None
+
+    def extract_election_data_2022(self, excel_file):
+        """
+        Extrait les données électorales du fichier Excel 2022.
+        """
+        logger.info(f"📥 Extraction des données électorales 2022 : {excel_file}")
+        try:
+            return (
+                self.spark.read.format("com.crealytics.spark.excel")
+                .option("header", "true")
+                .option("inferSchema", "true")
+                .option("sheetName", "Résultats")
+                .load(excel_file)
+            )
+        except Exception as e:
+            logger.error(f"❌ Erreur extraction 2022 : {str(e)}")
+            return None
 
     def stop(self):
         """

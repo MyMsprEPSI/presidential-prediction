@@ -1,15 +1,9 @@
 from pyspark.sql import SparkSession, functions as F , types as T
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType
 from pyspark.sql.functions import (
-    udf , col , regexp_extract , lit , when , expr,
-    concat_ws, concat , split , regexp_replace , lower,
-    trim , upper , coalesce, collect_list
+    col ,expr
 )
-import pandas as pd
-import re
 import glob
-import sys
 
 # Création de la session Spark
 spark = SparkSession.builder.appName("PresidentSummary") \

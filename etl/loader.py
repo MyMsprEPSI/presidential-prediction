@@ -36,11 +36,7 @@ class DataLoader:
             logger.error("❌ Impossible de sauvegarder un DataFrame vide.")
             return
 
-        # Extraire le nom de base du fichier source et générer le nom du fichier final
         base_name = os.path.basename(input_file_path).replace(".csv", "_processed.csv")
-        temp_output_dir = os.path.join(
-            "data/processed_data", "temp_csv_output"
-        )  # Dossier temporaire
         final_output_path = os.path.join("data/processed_data", base_name)
 
         logger.info(
@@ -48,22 +44,26 @@ class DataLoader:
         )
 
         try:
-            # Sauvegarde en CSV dans un dossier temporaire avec une seule partition (1 seul fichier)
-            df.coalesce(1).write.mode("overwrite").option("header", "true").csv(
-                temp_output_dir
-            )
+            # Utiliser toPandas() pour les petits datasets ou repartition() pour les grands
+            if df.count() < 1000000:  # Seuil arbitraire, à ajuster selon vos besoins
+                # Méthode pour petits datasets
+                df.toPandas().to_csv(final_output_path, index=False)
+            else:
+                # Méthode pour grands datasets
+                df.repartition(1).write.mode("overwrite").option("header", "true").csv(
+                    final_output_path + "_temp"
+                )
 
-            # Trouver le fichier CSV généré dans le dossier temporaire
-            for filename in os.listdir(temp_output_dir):
-                if filename.endswith(".csv"):
-                    temp_csv_path = os.path.join(temp_output_dir, filename)
-                    shutil.move(
-                        temp_csv_path, final_output_path
-                    )  # Renommer le fichier final
-                    break
+                # Renommer le fichier généré
+                for filename in os.listdir(final_output_path + "_temp"):
+                    if filename.endswith(".csv"):
+                        os.rename(
+                            os.path.join(final_output_path + "_temp", filename),
+                            final_output_path,
+                        )
 
-            # Supprimer le dossier temporaire
-            shutil.rmtree(temp_output_dir)
+            # Nettoyer le dossier temporaire
+            shutil.rmtree(final_output_path + "_temp")
 
             logger.info("✅ Fichier CSV sauvegardé avec succès !")
         except Exception as e:

@@ -32,7 +32,7 @@ def main():
         "./data/socio-economie/PIB Martinique.csv",
         "./data/socio-economie/PIB Guyane.csv",
         "./data/socio-economie/PIB La Réunion.csv",
-        "./data/socio-economie/PIB Mayotte.csv" # temporairement commenté par manque de données
+        "./data/socio-economie/PIB Mayotte.csv",  # temporairement commenté par manque de données
     ]
 
     region_codes = {
@@ -40,7 +40,7 @@ def main():
         "./data/socio-economie/PIB Martinique.csv": "02",
         "./data/socio-economie/PIB Guyane.csv": "03",
         "./data/socio-economie/PIB La Réunion.csv": "04",
-        "./data/socio-economie/PIB Mayotte.csv": "06"
+        "./data/socio-economie/PIB Mayotte.csv": "06",
     }
 
     # Ajoute à tes imports existants
@@ -48,6 +48,15 @@ def main():
     pib_2022_file = "./data/socio-economie/PIB par Région en 2022.csv"
     inflation_xlsx_file = "./data/socio-economie/Essentiel_Inflation_donnees.xlsx"
 
+    # Ajouter dans la section des chemins de fichiers
+    technologie_xlsx_file = "./data/technologie/Effort-recherche_tableaux_2024.xlsx"
+    election_files_pattern = (
+        "./data/politique/taux-votes/1965_2012/cdsp_presi*t2_circ.csv"
+    )
+    election_2017_file = (
+        "./data/politique/taux-votes/2017/Presidentielle_2017_Resultats_Tour_2_c.xls"
+    )
+    election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
 
     # ----------------------------------------------------------------
     # 2) Initialisation des objets ETL
@@ -90,11 +99,11 @@ def main():
     if df_pib_xlsx is None or df_pib_2022 is None:
         logger.error("❌ Extraction PIB Excel échouée.")
         return
-    
+
     # ----------------------------------------------------------------
     # 3.3) EXTRACT : Charger les données d'inflation
     # ----------------------------------------------------------------
-    
+
     df_inflation = extractor.extract_inflation_data(inflation_xlsx_file)
 
     if df_inflation is None:
@@ -104,6 +113,23 @@ def main():
     logger.info("✅ Extraction Inflation réussie :")
     df_inflation.show(5, truncate=False)
 
+    # ----------------------------------------------------------------
+    # 3.4) EXTRACT : Charger les données de technologie
+    # ----------------------------------------------------------------
+    df_technologie = extractor.extract_technologie_data(technologie_xlsx_file)
+
+    if df_technologie is None:
+        logger.error("❌ Extraction des données de technologie échouée.")
+        return
+
+    # ----------------------------------------------------------------
+    # 3.5) EXTRACT : Charger les données électorales
+    # ----------------------------------------------------------------
+    df_election_1965_2012 = extractor.extract_election_data_1965_2012(
+        election_files_pattern
+    )
+    df_election_2017 = extractor.extract_election_data_2017(election_2017_file)
+    df_election_2022 = extractor.extract_election_data_2022(election_2022_file)
 
     # ----------------------------------------------------------------
     # 4) TRANSFORM : Nettoyage et sélection des données : environnementales
@@ -124,7 +150,9 @@ def main():
     df_pib_transformed = transformer.transform_pib_outre_mer(df_pib, region_codes)
 
     # Remplissage des valeurs manquantes pour Mayotte uniquement
-    df_pib_transformed_completed = transformer.fill_missing_pib_mayotte(df_pib_transformed)
+    df_pib_transformed_completed = transformer.fill_missing_pib_mayotte(
+        df_pib_transformed
+    )
 
     if df_pib_transformed_completed is None:
         logger.error("❌ Remplissage PIB Mayotte échoué.")
@@ -156,8 +184,9 @@ def main():
         logger.error("❌ Transformation Inflation échouée.")
         return
 
-
-    df_pib_inflation = transformer.combine_pib_and_inflation(df_pib_total, df_inflation_transformed)
+    df_pib_inflation = transformer.combine_pib_and_inflation(
+        df_pib_total, df_inflation_transformed
+    )
 
     if df_pib_inflation is None:
         logger.error("❌ Fusion PIB + Inflation échouée.")
@@ -165,13 +194,72 @@ def main():
 
     logger.info("✅ Fusion des données PIB et Inflation réussie :")
     df_pib_inflation.show(10, truncate=False)
+
+    # ----------------------------------------------------------------
+    # 4.4) TRANSFORM : Transformation des données de technologie
+    # ----------------------------------------------------------------
+    df_technologie_transformed = transformer.transform_technologie_data(df_technologie)
+
+    if df_technologie_transformed is None:
+        logger.error("❌ Transformation des données de technologie échouée.")
+        return
+
+    # ----------------------------------------------------------------
+    # 4.5) TRANSFORM : Transformation des données électorales
+    # ----------------------------------------------------------------
+    # Transformation des données 1965-2012
+    df_election_1965_2012_transformed = transformer.transform_election_data_1965_2012(
+        df_election_1965_2012
+    )
+    if df_election_1965_2012_transformed is None:
+        logger.error("❌ Transformation des données électorales 1965-2012 échouée.")
+        return
+
+    # Transformation des données 2017
+    df_election_2017_transformed = transformer.transform_election_data_2017(
+        df_election_2017
+    )
+    if df_election_2017_transformed is None:
+        logger.error("❌ Transformation des données électorales 2017 échouée.")
+        return
+
+    # Transformation des données 2022
+    df_election_2022_transformed = transformer.transform_election_data_2022(
+        df_election_2022
+    )
+    if df_election_2022_transformed is None:
+        logger.error("❌ Transformation des données électorales 2022 échouée.")
+        return
+
+    # Combinaison de toutes les années
+    df_election_final = transformer.combine_all_years(
+        df_election_1965_2012_transformed,
+        df_election_2017_transformed,
+        df_election_2022_transformed,
+    )
+
+    if df_election_final is None:
+        logger.error("❌ Combinaison des données électorales échouée.")
+        return
+
+    logger.info("✅ Transformation des données électorales réussie !")
+    df_election_final.show(10, truncate=False)
+
     # ----------------------------------------------------------------
     # 5) LOAD : Sauvegarde en fichier CSV
     # ----------------------------------------------------------------
     loader.save_to_csv(df_transformed, input_file_path)
 
-    output_path_final = "./data/processed_data/pib_inflation_final.csv"
+    output_path_final = "pib_inflation_final.csv"
     loader.save_to_csv(df_pib_inflation, output_path_final)
+
+    # Ajouter dans la section LOAD
+    output_path_technologie = "technologie_pib_france_1990_2023.csv"
+    loader.save_to_csv(df_technologie_transformed, output_path_technologie)
+
+    # Dans la section LOAD, ajoutez :
+    output_path_election = "vote_presidentiel_par_dept_1965_2022.csv"
+    loader.save_to_csv(df_election_final, output_path_election)
 
     # ----------------------------------------------------------------
     # 6) Arrêt de la session Spark
