@@ -12,6 +12,7 @@ from pyspark.sql.types import (
 from pyspark.sql.functions import col, lit, regexp_extract
 import glob
 import logging
+import traceback
 
 # Configuration du logger
 logging.basicConfig(
@@ -388,58 +389,56 @@ class DataExtractor:
         
     def extract_demographic_data(self, excel_path):
         """
-        Extrait et fusionne toutes les feuilles correspondant aux années (de 2023 à 1975)
-        d'un fichier Excel au format XLS. On suppose que les feuilles utiles ont pour nom exactement
-        l'année (par exemple "2023", "2022", …, "1975"). La première feuille est ainsi exclue car
-        son nom ne correspond pas à une année.
+        Extrait les données démographiques directement à partir du fichier XLS.
         
-        :param excel_path: Chemin du fichier Excel (ex: "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls")
-        :return: DataFrame Spark fusionné contenant les données de toutes les feuilles avec une colonne "Année"
+        :param excel_path: Chemin du fichier Excel (format XLS ou XLSX)
+        :return: DataFrame Spark contenant les données fusionnées de toutes les années
         """
-        
         if not os.path.exists(excel_path):
             logger.error(f"❌ Fichier Excel non trouvé : {excel_path}")
             return None
 
-        logger.info(f"📥 Extraction de toutes les feuilles d'année depuis : {excel_path}")
+        logger.info(f"📥 Extraction des données démographiques depuis : {excel_path}")
         try:
-            # On définit la liste des années en tant que chaînes de caractères,
-            # ce qui correspond aux noms des feuilles utiles.
+            # Définition des années (noms des feuilles) de 2023 à 1975
             years = [str(year) for year in range(2023, 1974, -1)]
             df_union = None
 
             for year in years:
                 logger.info(f"📄 Traitement de la feuille : {year}")
-                # Chargement de la feuille par son nom avec spark-excel
+                
+                # Chargement de la feuille avec spark-excel
                 df_sheet = (
                     self.spark.read.format("com.crealytics.spark.excel")
                     .option("header", "true")
                     .option("inferSchema", "true")
                     .option("sheetName", year)
+                    .option("dataAddress", "A4") # Pour commencer à la ligne 4 (sauter l'en-tête)
                     .load(excel_path)
                 )
-                # Ajout d'une colonne "Année" avec la valeur correspondante
+                
+                # Ajout d'une colonne pour l'année
                 df_sheet = df_sheet.withColumn("Année", lit(year))
+                
                 # Union progressive des DataFrames
                 if df_union is None:
                     df_union = df_sheet
                 else:
                     df_union = df_union.union(df_sheet)
             
-            df_union.show(10, truncate=False)
-            
-            # Génération du CSV pour vérification
-            output_csv_path = "./data/demographie/output1/demographic_data_verification.csv"
-            # Création du répertoire si inexistant
-            os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
-            logger.info(f"💾 Génération du CSV de vérification: {output_csv_path}")
-            df_union.write.mode("overwrite").option("header", "true").csv(output_csv_path)
-            logger.info(f"✅ CSV généré avec succès")
-
-            return df_union
+            if df_union:
+                # Affichage des premières lignes pour vérification
+                logger.info("Aperçu des données extraites:")
+                df_union.show(5, truncate=False)
+                
+                return df_union
+            else:
+                logger.error("❌ Aucune donnée extraite des feuilles Excel")
+                return None
 
         except Exception as e:
-            logger.error(f"❌ Erreur lors de l'extraction des feuilles Excel : {str(e)}")
+            logger.error(f"❌ Erreur lors de l'extraction des données démographiques : {str(e)}")
+            logger.error(f"Détails: {traceback.format_exc()}")
             return None
 
 

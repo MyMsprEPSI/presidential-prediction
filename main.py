@@ -140,7 +140,11 @@ def main():
     # 3.6) EXTRACT : Charger les données de démographie
     # ----------------------------------------------------------------
     df_demographie = extractor.extract_demographic_data(demo_file)
-    df_demographie.show(10, truncate=False)
+    if df_demographie is None:
+        logger.error("❌ Extraction des données démographiques échouée.")
+    else:
+        logger.info("✅ Extraction des données démographiques réussie")
+        df_demographie.show(5, truncate=False)
     # ----------------------------------------------------------------
     # 3.7) EXTRACT : Charger les données d'éducation
     # ----------------------------------------------------------------
@@ -274,10 +278,21 @@ def main():
     df_election_final.show(10, truncate=False)
 
     # ----------------------------------------------------------------
-    # 4.6) EXTRACT : Charger les données de démographie
+    # 4.6) TRANSFORMATION : Charger les données de démographie
     # ----------------------------------------------------------------
-
-
+    """df_demographie_transformed = transformer.transform_demographic_data(df_demographie)
+            
+    if df_demographie_transformed is None:
+        logger.error("❌ Transformation des données démographiques échouée.")
+    else:
+        # Séparation des totaux et des données départementales
+        df_departements, df_totaux = transformer.separate_demographic_totals(df_demographie_transformed)
+                
+        if df_departements is None or df_totaux is None:
+            logger.error("❌ Séparation des données démographiques échouée.")
+        else:
+            logger.info("✅ Transformation des données démographiques réussie")
+    """
     # ----------------------------------------------------------------
     # 4.7) EXTRACT : Charger les données d'éducation
     # ----------------------------------------------------------------
@@ -312,6 +327,18 @@ def main():
     # Dans la section LOAD, ajoutez :
     output_path_election = "vote_presidentiel_par_dept_1965_2022.csv"
     loader.save_to_csv(df_election_final, output_path_election)
+
+    # ----------------------------------------------------------------
+    # 5.6) LOAD : Sauvegarde des données démographiques
+    # ----------------------------------------------------------------
+    """output_dir_demo = "./data/demographie/output"
+    success = loader.save_demographic_data(df_departements, df_totaux, output_dir_demo)
+    
+    if success:
+        logger.info("✅ Sauvegarde des données démographiques réussie")
+    else:
+        logger.error("❌ Sauvegarde des données démographiques échouée.")
+    """
 
     # ----------------------------------------------------------------
     # 6) Arrêt de la session Spark
