@@ -479,8 +479,6 @@ class DataExtractor:
 
         logger.info(f"📥 Extraction des données de départements depuis : {file_path}")
         
-        from pyspark.sql.types import StructType, StructField, StringType
-
         schema = StructType([
             StructField("code_departement", StringType(), True),
             StructField("nom_departement", StringType(), True),
@@ -497,9 +495,32 @@ class DataExtractor:
             logger.error(f"❌ Erreur lors de l'extraction des départements : {str(e)}")
             return None
 
+    def extract_education_data(self, input_path: str):
+        """
+        Extrait les données d'éducation depuis un fichier CSV.
+        Le fichier est attendu avec un en-tête, un séparateur ';' et un encodage UTF-8.
+        
+        :param input_path: Chemin du fichier CSV d'éducation.
+        :return: DataFrame PySpark contenant les données d'éducation.
+        """
+        if not os.path.exists(input_path):
+            logger.error(f"❌ Fichier d'éducation non trouvé : {input_path}")
+            return None
 
-
-
+        logger.info(f"📥 Extraction des données d'éducation depuis : {input_path}")
+        try:
+            df = self.spark.read \
+                .option("header", "true") \
+                .option("sep", ";") \
+                .option("encoding", "UTF-8") \
+                .csv(input_path)
+            logger.info(f"✓ Données d'éducation chargées avec succès depuis {input_path}")
+            logger.info(f"✓ Nombre de lignes: {df.count()}")
+            logger.info(f"✓ Colonnes présentes: {', '.join(df.columns)}")
+            return df
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du chargement du fichier d'éducation : {str(e)}")
+            return None
 
 
     def stop(self):

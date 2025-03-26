@@ -5,23 +5,20 @@ from pyspark.sql.functions import (
     col,
     when,
     lit,
-    isnan,
     sum as spark_sum,
     round,
     regexp_replace,
-    concat,
-    desc,
-    row_number,
-    lpad,
     regexp_extract,
     expr,
     trim,
 )
-from pyspark.sql.types import IntegerType, DoubleType, StringType, StructType, StructField
+from pyspark.sql.types import IntegerType, DoubleType, DateType
 from pyspark.sql.window import Window
 from pyspark.sql import functions as F, types as T
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
+
+
 
 
 # Configuration du logger
@@ -155,8 +152,6 @@ class DataTransformer:
         """
         Remplit les valeurs manquantes du PIB de Mayotte par régression linéaire.
         """
-
-        from pyspark.sql.functions import col
 
         logger.info("🚀 Remplissage des valeurs manquantes PIB Mayotte en cours...")
 
@@ -646,8 +641,6 @@ class DataTransformer:
             logger.warning("Aucun DataFrame à combiner.")
             return None
 
-        import pyspark.sql.functions as F
-
         # Union 2017 et 2022
         df_final = df_2017.union(df_2022)
 
@@ -808,8 +801,7 @@ class DataTransformer:
         :param df_final: DataFrame final avec colonnes CODE_DEP, Année, Espérance_Vie_Homme, Espérance_Vie_Femme
         :return: DataFrame final avec les valeurs manquantes pour Mayotte complétées et arrondies à 2 décimales
         """
-        from pyspark.ml.feature import VectorAssembler
-        from pyspark.ml.regression import LinearRegression
+
 
         # Filtrer uniquement les données de Mayotte
         df_mayotte = df_final.filter(col("CODE_DEP") == "976")
@@ -868,6 +860,92 @@ class DataTransformer:
         df_filled = df_other.unionByName(df_mayotte_filled).orderBy("CODE_DEP", "Année")
         
         return df_filled
+    
+    def transform_education_data(self, df):
+        """
+        Transforme et nettoie les données d'éducation issues du CSV 'fr-en-etablissements-fermes.csv'.
+        Étapes de transformation :
+          1. Suppression des doublons.
+          2. Standardisation de toutes les colonnes textuelles (conversion en minuscules, suppression des espaces,
+             remplacement des valeurs nulles par "non spécifié").
+          3. Conversion de la colonne "date_fermeture" en type Date et extraction de l'année dans "annee_fermeture".
+          4. Normalisation du code postal : remplacement des valeurs nulles par "00000", puis suppression des espaces.
+          5. Séparation des secteurs public et privé à partir de la colonne "secteur_public_prive_libe".
+        :param df: DataFrame Spark brut issu du fichier CSV d’éducation.
+        :return: DataFrame nettoyé et transformé.
+        """
+
+        logger.info("🚀 Transformation des données d'éducation en cours...")
+
+        # 1. Suppression des doublons
+        df = df.dropDuplicates()
+
+        # 2. Standardisation des colonnes textuelles
+        for column in df.columns:
+            df = df.withColumn(
+                column,
+                F.when(F.col(column).isNotNull(), F.trim(F.lower(F.col(column))))
+                .otherwise(F.lit("non spécifié"))
+            )
+
+        # 3. Conversion de 'date_fermeture' en DateType et extraction de l'année
+        if "date_fermeture" in df.columns:
+            df = df.withColumn("date_fermeture", F.col("date_fermeture").cast(DateType()))
+            df = df.withColumn("annee_fermeture", F.year(F.col("date_fermeture")))
+
+        # 4. Normalisation du code postal
+        if "code_postal" in df.columns:
+            df = df.withColumn(
+                "code_postal",
+                F.when(F.col("code_postal").isNull(), F.lit("00000"))
+                .otherwise(F.trim(F.col("code_postal")))
+            )
+
+        # 5. Séparation du secteur public/privé
+        if "secteur_public_prive_libe" in df.columns:
+            df = df.withColumn(
+                "secteur_public",
+                F.when(F.col("secteur_public_prive_libe") == "public", 1).otherwise(0)
+            )
+            df = df.withColumn(
+                "secteur_prive",
+                F.when(F.col("secteur_public_prive_libe") == "privé", 1).otherwise(0)
+            )
+
+        logger.info("✅ Transformation des données d'éducation réussie.")
+        df.show(5, truncate=False)
+        return df
+
+    def calculate_closed_by_year_and_dept_education(self, df):
+        """
+        Calcule le nombre d'établissements fermés par année et par département à partir des données d’éducation.
+        Regroupe par 'annee_fermeture', 'code_departement' et 'libelle_departement', puis agrège :
+          - Le nombre total d'établissements (count sur "numero_uai"),
+          - Le nombre d'établissements fermés dans le secteur public (sum de "secteur_public"),
+          - Le nombre dans le secteur privé (sum de "secteur_prive"),
+          - Les pourcentages correspondants (arrondis à 2 décimales).
+        :param df: DataFrame nettoyé d'éducation, incluant les colonnes "annee_fermeture", "code_departement",
+                   "libelle_departement", "numero_uai", "secteur_public" et "secteur_prive".
+        :return: DataFrame avec les statistiques par année et département.
+        """
+
+
+        logger.info("🚀 Calcul des statistiques de fermetures d'établissements par département et année...")
+
+        df_grouped = df.groupBy("annee_fermeture", "code_departement", "libelle_departement") \
+            .agg(
+                F.count("numero_uai").alias("nombre_total_etablissements"),
+                F.sum("secteur_public").alias("nb_public"),
+                F.sum("secteur_prive").alias("nb_prive"),
+                F.round((F.sum("secteur_public") * 100.0 / F.count("*")), 2).alias("pct_public"),
+                F.round((F.sum("secteur_prive") * 100.0 / F.count("*")), 2).alias("pct_prive")
+            ) \
+            .orderBy("annee_fermeture", "code_departement")
+
+        logger.info("✅ Calcul terminé. Aperçu des statistiques :")
+        df_grouped.show(10, truncate=False)
+        return df_grouped
+
 
 
 

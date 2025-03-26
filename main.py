@@ -61,7 +61,7 @@ def main():
     election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
 
     demo_file = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
-    #education_file = "./data/education/fr-en-etablissements-fermes.csv"
+    education_file = "./data/education/fr-en-etablissements-fermes.csv"
     life_expectancy_file = "./data/sante/valeurs_annuelles.csv"
     departments_file_path = "./data/departements-france.csv"
 
@@ -150,7 +150,12 @@ def main():
     # ----------------------------------------------------------------
     # 3.7) EXTRACT : Charger les données d'éducation
     # ----------------------------------------------------------------
-
+    df_education = extractor.extract_education_data(education_file)
+    if df_education is None:
+        logger.error("❌ Échec de l'extraction des données d'éducation")
+        return
+    logger.info("✅ Extraction des données d'éducation réussie")
+    df_education.show(5, truncate=False)
 
     # ----------------------------------------------------------------
     # 3.8) EXTRACT : Charger les données de sécurité
@@ -295,7 +300,7 @@ def main():
     df_election_final.show(10, truncate=False)
 
     # ----------------------------------------------------------------
-    # 4.6) TRANSFORMATION : Charger les données de démographie
+    # 4.6) TRANSFORMATION : nettoyage et sélection des données démographiques
     # ----------------------------------------------------------------
     """df_demographie_transformed = transformer.transform_demographic_data(df_demographie)
             
@@ -311,17 +316,28 @@ def main():
             logger.info("✅ Transformation des données démographiques réussie")
     """
     # ----------------------------------------------------------------
-    # 4.7) EXTRACT : Charger les données d'éducation
+    # 4.7) TRANSFORMATION : nettoyage et sélection des données d'éducation
+    # ----------------------------------------------------------------
+
+    df_edu_clean = transformer.transform_education_data(df_education)
+    logger.info("✅ Transformation et nettoyage des données d'éducation réussie")
+    df_edu_clean.show(5, truncate=False)
+
+    # 4.7.1) Calcul des statistiques par année et département
+    df_edu_grouped = transformer.calculate_closed_by_year_and_dept_education(df_edu_clean)
+    if df_edu_grouped is None:
+        logger.error("❌ Échec du calcul des statistiques d'éducation")
+        return
+    logger.info("✅ Calcul des statistiques terminé")
+    df_edu_grouped.show(10, truncate=False)
+
+    # ----------------------------------------------------------------
+    # 4.8) TRANSFORMATION : nettoyage et sélection des données de sécurité
     # ----------------------------------------------------------------
 
 
     # ----------------------------------------------------------------
-    # 4.8) EXTRACT : Charger les données de sécurité
-    # ----------------------------------------------------------------
-
-
-    # ----------------------------------------------------------------
-    # 4.9) TRANSFORM : Charger les données de santé
+    # 4.9) TRANSFORM : nettoyage et sélection des données de santé
     # ----------------------------------------------------------------
 
     # Transformation des données d'espérance de vie en incluant la jointure avec les départements
@@ -339,6 +355,8 @@ def main():
     # 5) LOAD : Sauvegarde en fichier CSV
     # ----------------------------------------------------------------
     loader.save_to_csv(df_transformed, input_file_path)
+
+    loader.save_to_csv(df_edu_grouped, education_file)
 
     output_path_final = "pib_inflation_final.csv"
     loader.save_to_csv(df_pib_inflation, output_path_final)
