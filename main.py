@@ -62,6 +62,8 @@ def main():
 
     demo_file = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
     #education_file = "./data/education/fr-en-etablissements-fermes.csv"
+    life_expectancy_file = "./data/sante/valeurs_annuelles.csv"
+    departments_file_path = "./data/departements-france.csv"
 
     # ----------------------------------------------------------------
     # 2) Initialisation des objets ETL
@@ -159,7 +161,22 @@ def main():
     # 3.9) EXTRACT : Charger les données de santé
     # ----------------------------------------------------------------
 
+    df_life_expectancy_raw = extractor.extract_life_expectancy_data(life_expectancy_file)
 
+    if df_life_expectancy_raw is None:
+        logger.error("❌ Échec de l'extraction des données. Arrêt du programme.")
+        return
+
+    logger.info("✅ Extraction réussie ! Aperçu des données extraites :")
+    df_life_expectancy_raw.show(3, truncate=False)
+
+    # Extraction des données de départements
+    df_departments = extractor.extract_departments_data(departments_file_path)
+    if df_departments is None:
+        logger.error("❌ Échec de l'extraction des données des départements.")
+        return
+    logger.info("✅ Extraction des données des départements réussie.")
+    df_departments.show(5, truncate=False)
 
 
 
@@ -304,10 +321,16 @@ def main():
 
 
     # ----------------------------------------------------------------
-    # 4.9) EXTRACT : Charger les données de santé
+    # 4.9) TRANSFORM : Charger les données de santé
     # ----------------------------------------------------------------
 
-
+    # Transformation des données d'espérance de vie en incluant la jointure avec les départements
+    df_life_final = transformer.transform_life_expectancy_data(df_life_expectancy_raw, df_departments)
+    if df_life_final is None:
+        logger.error("❌ Échec de la transformation des données d'espérance de vie.")
+        return
+    logger.info("✅ Transformation des données d'espérance de vie réussie.")
+    df_life_final.show(10, truncate=False)
 
 
 
@@ -327,6 +350,9 @@ def main():
     # Dans la section LOAD, ajoutez :
     output_path_election = "vote_presidentiel_par_dept_1965_2022.csv"
     loader.save_to_csv(df_election_final, output_path_election)
+
+    output_path_life = "esperance_de_vie_par_departement_2000_2022.csv"
+    loader.save_to_csv(df_life_final, output_path_life)
 
     # ----------------------------------------------------------------
     # 5.6) LOAD : Sauvegarde des données démographiques

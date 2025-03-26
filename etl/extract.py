@@ -440,6 +440,66 @@ class DataExtractor:
             logger.error(f"❌ Erreur lors de l'extraction des données démographiques : {str(e)}")
             logger.error(f"Détails: {traceback.format_exc()}")
             return None
+        
+    def extract_life_expectancy_data(self, file_path):
+        """
+        Charge le fichier CSV 'valeurs_anuelles.csv' contenant les données d'espérance de vie à la naissance.
+        Le fichier est structuré avec une ligne d'en-tête contenant :
+        "Libellé";"idBank";"Dernière mise à jour";"Période";"1901";"1902"; ... ;"2024"
+        
+        :param file_path: Chemin du fichier CSV à charger
+        :return: DataFrame PySpark contenant les données brutes d'espérance de vie
+        """
+        if not os.path.exists(file_path):
+            logger.error(f"❌ Fichier non trouvé : {file_path}")
+            return None
+
+        logger.info(f"📥 Extraction des données d'espérance de vie depuis : {file_path}")
+
+        try:
+            return self.spark.read.option("header", "true") \
+                .option("delimiter", ";") \
+                .option("inferSchema", "true") \
+                .csv(file_path)
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de l'extraction des données d'espérance de vie : {str(e)}")
+            return None
+        
+    def extract_departments_data(self, file_path):
+        """
+        Extrait les données des départements depuis le fichier CSV "departements-france.csv".
+        Le fichier contient les colonnes : code_departement, nom_departement, code_region, nom_region.
+        
+        :param file_path: Chemin du fichier CSV des départements.
+        :return: DataFrame PySpark avec les données des départements.
+        """
+        if not os.path.exists(file_path):
+            logger.error(f"❌ Fichier de départements non trouvé : {file_path}")
+            return None
+
+        logger.info(f"📥 Extraction des données de départements depuis : {file_path}")
+        
+        from pyspark.sql.types import StructType, StructField, StringType
+
+        schema = StructType([
+            StructField("code_departement", StringType(), True),
+            StructField("nom_departement", StringType(), True),
+            StructField("code_region", StringType(), True),
+            StructField("nom_region", StringType(), True),
+        ])
+
+        try:
+            return self.spark.read.option("header", "true") \
+                     .option("delimiter", ",") \
+                     .schema(schema) \
+                     .csv(file_path)
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de l'extraction des départements : {str(e)}")
+            return None
+
+
+
+
 
 
     def stop(self):

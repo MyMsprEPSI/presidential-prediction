@@ -29,8 +29,8 @@ def load_data(df, output_path):
 
 def main():
     # Chemins des fichiers d'entrée et de sortie
-    input_file_path = "C:\\Users\\joyce\\EPSI\\MSPR\\Bloc 3\\MSPR\\datas\\santé\\esperance_de_vie_2000_2022.xlsx"
-    output_file_path = 'C:\\Users\\joyce\\EPSI\\MSPR\\Bloc 3\\MSPR\\datas\\santé' 
+    input_file_path = "data/sante/esperance_de_vie_2000_2022.xlsx"
+    output_file_path = 'data/sante/'
 
     # Extraction
     data = extract_data(input_file_path, file_type='csv')
