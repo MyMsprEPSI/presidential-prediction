@@ -796,6 +796,80 @@ class DataTransformer:
         df_unmatched.select("Département", "Département_norm").distinct().show(truncate=False)
 
         return df_final
+    
+
+    def fill_missing_mayotte_life_expectancy(self, df_final):
+        """
+        Complète les valeurs manquantes pour Mayotte (CODE_DEP = "976")
+        dans le DataFrame final en utilisant une régression linéaire sur l'année.
+        On entraîne deux modèles (un pour les hommes et un pour les femmes) sur les données connues,
+        puis on prédit pour les années manquantes (ici, par exemple pour 2000-2013).
+
+        :param df_final: DataFrame final avec colonnes CODE_DEP, Année, Espérance_Vie_Homme, Espérance_Vie_Femme
+        :return: DataFrame final avec les valeurs manquantes pour Mayotte complétées et arrondies à 2 décimales
+        """
+        from pyspark.ml.feature import VectorAssembler
+        from pyspark.ml.regression import LinearRegression
+
+        # Filtrer uniquement les données de Mayotte
+        df_mayotte = df_final.filter(col("CODE_DEP") == "976")
+        
+        # Pour les hommes
+        known_men = df_mayotte.filter(col("Espérance_Vie_Homme").isNotNull())
+        unknown_men = df_mayotte.filter(col("Espérance_Vie_Homme").isNull())
+        
+        assembler = VectorAssembler(inputCols=["Année"], outputCol="features")
+        train_men = assembler.transform(known_men).select("Année", "features", "Espérance_Vie_Homme")
+        
+        lr_men = LinearRegression(featuresCol="features", labelCol="Espérance_Vie_Homme")
+        model_men = lr_men.fit(train_men)
+        
+        pred_men = assembler.transform(unknown_men)
+        pred_men = model_men.transform(pred_men).select("Année", col("prediction").alias("pred_men"))
+        
+        # Pour les femmes
+        known_women = df_mayotte.filter(col("Espérance_Vie_Femme").isNotNull())
+        unknown_women = df_mayotte.filter(col("Espérance_Vie_Femme").isNull())
+        
+        train_women = assembler.transform(known_women).select("Année", "features", "Espérance_Vie_Femme")
+        lr_women = LinearRegression(featuresCol="features", labelCol="Espérance_Vie_Femme")
+        model_women = lr_women.fit(train_women)
+        
+        pred_women = assembler.transform(unknown_women)
+        pred_women = model_women.transform(pred_women).select("Année", col("prediction").alias("pred_women"))
+        
+        # Joindre les prédictions sur "Année"
+        pred_combined = pred_men.join(pred_women, on="Année", how="inner")
+        
+        # Remplacer les valeurs manquantes par les prédictions en arrondissant à 2 décimales
+        df_mayotte_filled = df_mayotte.alias("base").join(
+            pred_combined.alias("pred"),
+            on="Année",
+            how="left"
+        ).withColumn(
+            "Espérance_Vie_Homme_new",
+            when(col("base.Espérance_Vie_Homme").isNull(), round(col("pred.pred_men"), 1))
+            .otherwise(round(col("base.Espérance_Vie_Homme"), 1))
+        ).withColumn(
+            "Espérance_Vie_Femme_new",
+            when(col("base.Espérance_Vie_Femme").isNull(), round(col("pred.pred_women"), 1))
+            .otherwise(round(col("base.Espérance_Vie_Femme"), 1))
+        ).select(
+            col("base.CODE_DEP").alias("CODE_DEP"),
+            col("base.Année").alias("Année"),
+            col("Espérance_Vie_Homme_new").alias("Espérance_Vie_Homme"),
+            col("Espérance_Vie_Femme_new").alias("Espérance_Vie_Femme")
+        )
+        
+        # Conserver les données pour les autres départements
+        df_other = df_final.filter(col("CODE_DEP") != "976")
+        
+        # Fusionner et trier le DataFrame final
+        df_filled = df_other.unionByName(df_mayotte_filled).orderBy("CODE_DEP", "Année")
+        
+        return df_filled
+
+
 
 
 

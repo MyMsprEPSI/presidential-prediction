@@ -332,7 +332,7 @@ def main():
     logger.info("✅ Transformation des données d'espérance de vie réussie.")
     df_life_final.show(10, truncate=False)
 
-
+    df_life_final = transformer.fill_missing_mayotte_life_expectancy(df_life_final)
 
 
     # ----------------------------------------------------------------
