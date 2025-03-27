@@ -1043,47 +1043,104 @@ class DataTransformer:
     def transform_demography_data(self, df):
         """
         Transforme les données démographiques issues du CSV en :
-          - Renommant les colonnes
-          - Filtrant les lignes inutiles
-          - Réorganisant les colonnes
-        Cette logique est inspirée du code de transform_demoV2.
+        - Renommant les colonnes principales
+        - Nettoyant la colonne du code département et en filtrant les lignes parasites
+        - Conserver la colonne 'Année' (provenant du nom de la feuille Excel)
+        - Classer par Année, puis par département
         """
+        from pyspark.sql.functions import col, trim, regexp_replace, split, when
+
         if df is None:
             logger.error("❌ Le DataFrame de démographie est vide ou invalide.")
             return None
 
         logger.info("🚀 Transformation des données démographiques en cours...")
 
-        # Renommage des colonnes principales
-        df = (
-            df.withColumnRenamed("Départements", "Code_Département")
-            .withColumnRenamed("Unnamed: 1", "Nom_Département")
-            .withColumnRenamed("Ensemble", "E_Total")
-            .withColumnRenamed("Hommes", "H_Total")
+        # 1) Renommage des colonnes principales (selon votre CSV)
+        #    Assurez-vous que ces noms correspondent à votre structure réelle
+        df = df.withColumnRenamed("Départements", "Code_Département") \
+            .withColumnRenamed("Unnamed: 1", "Nom_Département") \
+            .withColumnRenamed("Ensemble", "E_Total") \
+            .withColumnRenamed("Hommes", "H_Total") \
             .withColumnRenamed("Femmes", "F_Total")
-        )
 
-        # Renommage des colonnes pour les tranches d'âge
-        df = (
-            df.withColumnRenamed("Unnamed: 3", "E_0_19_ans")
-            .withColumnRenamed("Unnamed: 4", "E_20_39_ans")
-            .withColumnRenamed("Unnamed: 5", "E_40_59_ans")
-            .withColumnRenamed("Unnamed: 6", "E_60_74_ans")
+        # 2) Renommage des colonnes des tranches d'âge
+        df = df.withColumnRenamed("Unnamed: 3", "E_0_19_ans") \
+            .withColumnRenamed("Unnamed: 4", "E_20_39_ans") \
+            .withColumnRenamed("Unnamed: 5", "E_40_59_ans") \
+            .withColumnRenamed("Unnamed: 6", "E_60_74_ans") \
             .withColumnRenamed("Unnamed: 7", "E_75_et_plus")
+
+        # 3) Filtrer les lignes parasites
+        #    (celles qui commencent par "Source", contiennent "France" ou "DOM", etc.)
+        #    et aussi la ligne d'en-tête répétée (repérée par "0 à 19 ans" dans E_0_19_ans)
+        df = df.filter(
+            ~col("Code_Département").startswith("Source") &
+            ~col("Code_Département").contains("France") &
+            ~col("Code_Département").contains("DOM") &
+            ~col("Code_Département").startswith("NB") &
+            ~col("Code_Département").startswith("Population") &
+            (col("E_0_19_ans") != "0 à 19 ans")
         )
 
-        # Filtrer les lignes d'en-tête ou de note (ex: lignes commençant par "Source")
-        df = df.filter(~col("Code_Département").startswith("Source"))
+        # 4) Nettoyer la colonne Code_Département : suppression des espaces et guillemets
+        df = df.withColumn("Code_Département", trim(col("Code_Département")))
+        df = df.withColumn("Code_Département", regexp_replace(col("Code_Département"), '"', ''))
 
-        # Tri par année si la colonne existe, sinon par Code_Département
-        if "Année" in df.columns:
-            df = df.orderBy(col("Année").desc())
-        else:
-            df = df.orderBy("Code_Département")
+        # 5) Extraire le code (premier token) et éventuellement le nom depuis la colonne Code_Département
+        df = df.withColumn("first_token", split(col("Code_Département"), " ", 2)[0]) \
+            .withColumn("remainder", split(col("Code_Département"), " ", 2)[1])
 
-        return self._extracted_from_combine_election_and_orientation_politique_52(
-            "✅ Transformation des données démographiques terminée", df, 5
+        # 6) Ne conserver que les lignes dont le premier token correspond à un code département valide
+        df = df.filter(col("first_token").rlike("^(2A|2B|[0-9]{1,3})$"))
+
+        # 7) Remplacer Code_Département par le premier token
+        df = df.withColumn("Code_Département", col("first_token"))
+
+        # 8) Si Nom_Département est vide, utiliser remainder comme nom
+        df = df.withColumn(
+            "Nom_Département",
+            when(
+                (col("Nom_Département").isNull()) | (col("Nom_Département") == ""),
+                col("remainder")
+            ).otherwise(col("Nom_Département"))
         )
+
+        # 9) Supprimer les colonnes temporaires
+        df = df.drop("first_token", "remainder")
+
+        # 10) Sélectionner et réorganiser les colonnes dans l'ordre souhaité
+        #     On inclut désormais "Année" pour la conserver et trier ensuite.
+        final_columns = [
+            "Année",
+            "Code_Département", 
+            "Nom_Département", 
+            "E_Total", 
+            "H_Total", 
+            "F_Total",
+            "E_0_19_ans", 
+            "E_20_39_ans", 
+            "E_40_59_ans", 
+            "E_60_74_ans", 
+            "E_75_et_plus"
+        ]
+
+        # Vérifier que la colonne "Année" existe bien dans votre DataFrame
+        # (au cas où la ligne "df['Année'] = sheet" a bien été créée à l'extraction)
+        available_cols = [c for c in final_columns if c in df.columns]
+        df_final = df.select(*available_cols)
+
+        # 11) Classer par Année, puis par Code_Département
+        #     Si Année est stockée en string, on peut la convertir en int si c'est un simple nombre
+        df_final = df_final.withColumn("Année_int", col("Année").cast("int")) \
+                        .orderBy(col("Année_int").asc(), col("Code_Département")) \
+                        .drop("Année_int")
+
+        logger.info("✅ Transformation des données démographiques terminée")
+        df_final.show(5, truncate=False)
+        return df_final
+
+
 
     def combine_election_and_orientation_politique(self, df_election, df_orientation):
         """
