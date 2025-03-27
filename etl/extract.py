@@ -545,37 +545,40 @@ class DataExtractor:
         logger.info(f"📥 Extraction des données de sécurité depuis : {excel_path}")
 
         try:
-            import pandas as pd
-
-            # Lire les noms des feuilles
-            xls = pd.ExcelFile(excel_path)
-            dept_sheets = [sheet for sheet in xls.sheet_names if sheet.isdigit()]
-
-            # Liste pour stocker les DataFrames pandas
-            all_dfs = []
-
-            # Lire chaque feuille avec pandas
-            for dept in dept_sheets:
-                logger.info(f"📄 Lecture de la feuille du département {dept}")
-                df_sheet = pd.read_excel(excel_path, sheet_name=dept)
-                df_sheet["departement"] = dept
-                all_dfs.append(df_sheet)
-
-            # Combiner tous les DataFrames pandas
-            df_combined = pd.concat(all_dfs, ignore_index=True)
-
-            # Convertir le DataFrame pandas en DataFrame Spark
-            df_spark = self.spark.createDataFrame(df_combined)
-
-            logger.info("✅ Extraction des données de sécurité réussie")
-            return df_spark
-
+            return self._extracted_from_extract_security_data_16(excel_path)
         except Exception as e:
             logger.error(
                 f"❌ Erreur lors de l'extraction des données de sécurité : {str(e)}"
             )
             logger.error(f"Détails : {traceback.format_exc()}")
             return None
+
+    # TODO Rename this here and in `extract_security_data`
+    def _extracted_from_extract_security_data_16(self, excel_path):
+        import pandas as pd
+
+        # Lire les noms des feuilles
+        xls = pd.ExcelFile(excel_path)
+        dept_sheets = [sheet for sheet in xls.sheet_names if sheet.isdigit()]
+
+        # Liste pour stocker les DataFrames pandas
+        all_dfs = []
+
+        # Lire chaque feuille avec pandas
+        for dept in dept_sheets:
+            logger.info(f"📄 Lecture de la feuille du département {dept}")
+            df_sheet = pd.read_excel(excel_path, sheet_name=dept)
+            df_sheet["departement"] = dept
+            all_dfs.append(df_sheet)
+
+        # Combiner tous les DataFrames pandas
+        df_combined = pd.concat(all_dfs, ignore_index=True)
+
+        # Convertir le DataFrame pandas en DataFrame Spark
+        df_spark = self.spark.createDataFrame(df_combined)
+
+        logger.info("✅ Extraction des données de sécurité réussie")
+        return df_spark
         
 
     def extract_demography_data(self, file_xls, file_xlsx, file_csv):
@@ -623,6 +626,15 @@ class DataExtractor:
         # --- Chargement du CSV avec Spark ---
         return self.spark.read.option("header", True).option("sep", ";").csv(file_csv)
 
+    def extract_orientation_politique(self, file_path):
+        """
+        Extrait les données d'orientation politique depuis un fichier CSV.
+        """
+        if not os.path.exists(file_path):
+            logger.error(f"❌ Fichier non trouvé : {file_path}")
+            return None
+        logger.info(f"📥 Extraction des données d'orientation politique depuis : {file_path}")
+        return self.spark.read.option("header", True).csv(file_path)
 
     def stop(self):
         """

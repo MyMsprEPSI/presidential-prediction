@@ -59,11 +59,11 @@ def main():
         "./data/politique/taux-votes/2017/Presidentielle_2017_Resultats_Tour_2_c.xls"
     )
     election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
-
+    orientation_politique_file = "./data/politique/partie_politiques/partie_politiques_1965_2022.csv"
    
     education_file = "./data/education/fr-en-etablissements-fermes.csv"
     life_expectancy_file = "./data/sante/valeurs_annuelles.csv"
-    departments_file_path = "./data/departements-france.csv"
+    departments_file_path = "./data/politique/departements-france.csv"
 
     # Dans la section des chemins de fichiers
     security_excel_file = "./data/securite/tableaux-4001-ts.xlsx"
@@ -197,6 +197,16 @@ def main():
     df_departments.show(5, truncate=False)
 
     # ----------------------------------------------------------------
+    # 3.10) EXTRACT : Charger les données d'orientation politique
+    # ----------------------------------------------------------------
+    df_orientation_politique = extractor.extract_orientation_politique(orientation_politique_file)
+    if df_orientation_politique is None:
+        logger.error("❌ Échec de l'extraction des données d'orientation politique.")
+        return
+    logger.info("✅ Extraction des données d'orientation politique réussie.")
+    df_orientation_politique.show(5, truncate=False)
+    
+    # ----------------------------------------------------------------
     # 4) TRANSFORM : Nettoyage et sélection des données : environnementales
     # ----------------------------------------------------------------
     df_transformed = transformer.transform_environmental_data(df_env)
@@ -301,6 +311,11 @@ def main():
         df_election_1965_2012_transformed,
         df_election_2017_transformed,
         df_election_2022_transformed,
+    )
+
+    # Combinaison des données électorales avec les données d'orientation politique
+    df_election_final = transformer.combine_election_and_orientation_politique(
+        df_election_final, df_orientation_politique
     )
 
     if df_election_final is None:

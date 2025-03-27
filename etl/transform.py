@@ -11,13 +11,15 @@ from pyspark.sql.functions import (
     regexp_extract,
     expr,
     trim,
+    upper,
+    create_map
 )
 from pyspark.sql.types import IntegerType, DoubleType, DateType
 from pyspark.sql.window import Window
 from pyspark.sql import functions as F, types as T
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
-
+from itertools import chain
 
 # Configuration du logger
 logging.basicConfig(
@@ -1083,3 +1085,66 @@ class DataTransformer:
         logger.info("✅ Transformation des données démographiques terminée")
         df.show(5, truncate=False)
         return df
+
+    def combine_election_and_orientation_politique(self, df_election, df_orientation):
+        """
+        Combinaison des données électorales avec les données d'orientation politique.
+        """
+        if df_election is None or df_orientation is None:
+            logger.error("❌ Données invalides pour la combinaison")
+
+        logger.info("🚀 Combinaison des données électorales avec les données d'orientation politique...")
+        
+        # 3. Nettoyer les noms des candidats
+        df_election = df_election.withColumn("candidat_clean", trim(upper(col("candidat"))))
+
+        # 4. Mapping candidat -> orientation politique
+        candidate_to_orientation = {
+            "CHARLES DE GAULLE": "droite",
+            "FRANÇOIS MITTERRAND": "gauche",
+            "VALÉRY GISCARD D'ESTAING": "centre droite",
+            "VALÉRY GISCARD DESTAING": "centre droite",
+            "VALERY GISCARD D'ESTAING": "centre droite",
+            "VALERY GISCARD DESTAING": "centre droite",
+            "JACQUES CHIRAC": "droite",
+            "LIONEL JOSPIN": "gauche",
+            "NICOLAS SARKOZY": "droite",
+            "SÉGOLÈNE ROYAL": "gauche",
+            "FRANÇOIS HOLLANDE": "gauche",
+            "MARINE LE PEN": "extreme droite",
+            "JEAN-LUC MÉLENCHON": "extreme gauche",
+            "EMMANUEL MACRON": "centre",
+            "ARLETTE LAGUILLER": "extreme gauche",
+            "PHILIPPE POUTOU": "extreme gauche",
+            "NATHALIE ARTHAUD": "extreme gauche",
+            "JEAN-MARIE LE PEN": "extreme droite",
+            "BENOÎT HAMON": "gauche",
+            "DOMINIQUE DE VILLEPIN": "droite",
+            "CHRISTINE BOUTIN": "droite",
+            "FRANÇOIS BAYROU": "centre droite",
+            "NICOLAS DUPONT-AIGNAN": "droite",
+            "ÉRIC ZEMMOUR": "extreme droite",
+            "YANNICK JADOT": "écologiste",
+            "NOËL MAMÈRE": "écologiste",
+            "ANTOINE WAQUIN": "extreme gauche",
+            "GEORGES MARCHAIS": "gauche",
+            "ROBERT HUE": "gauche",
+            "GEORGES POMPIDOU": "droite",
+            "ALAIN POHER": "centre droite",
+        }
+
+        # 5. Ajouter la colonne orientation politique
+        orientation_expr = create_map([lit(k) for k in chain(*candidate_to_orientation.items())])
+        df_election = df_election.withColumn("orientation_politique", orientation_expr.getItem(col("candidat_clean")))
+
+        # 6. Créer le mapping orientation -> id à partir du fichier des partis
+        orientation_id_map = {row["Orientation politique"]: row["id"] for row in df_orientation.select("Orientation politique", "id").distinct().collect()}
+        orientation_id_expr = create_map([lit(k) for k in chain(*orientation_id_map.items())])
+        df_election = df_election.withColumn("id_parti", orientation_id_expr.getItem(col("orientation_politique")))
+
+        # Drop candidat_clean
+        df_election = df_election.drop("candidat_clean")
+        
+        logger.info("✅ Combinaison des données électorales avec les données d'orientation politique terminée")
+        df_election.show(5, truncate=False)
+        return df_election
