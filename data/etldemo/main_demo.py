@@ -18,7 +18,7 @@ def main():
     spark.sparkContext.setLogLevel("ERROR")
     
     # Chemin du fichier Excel source (doit être au format XLSX)
-    excel_path = "D:\Thomas\Documents\GitHub\bigdata-project\data\demographie\estim-pop-dep-sexe-gca-1975-2023.xls"
+    excel_path = "D:\\Thomas\\Documents\\GitHub\\bigdata-project\\data\\demographie\\estim-pop-dep-sexe-gca-1975-2023.xls"
     
     # Extraction des données depuis le fichier Excel
     print("🚀 Démarrage de l'extraction...")

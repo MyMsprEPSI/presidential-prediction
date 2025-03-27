@@ -1,6 +1,7 @@
 # extract.py
 
 import os
+import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.types import (
     StructType,
@@ -19,6 +20,53 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+def convert_excel_to_xlsx(file_xls, file_xlsx):
+    """
+    Convertit le fichier XLS en XLSX si ce dernier n'existe pas déjà.
+    """
+    if not os.path.exists(file_xlsx):
+        print("📥 Conversion du fichier XLS en XLSX...")
+        try:
+            # Charger toutes les feuilles du fichier XLS
+            excel_data = pd.read_excel(file_xls, sheet_name=None)
+            with pd.ExcelWriter(file_xlsx, engine="openpyxl") as writer:
+                for sheet, data in excel_data.items():
+                    data.to_excel(writer, sheet_name=sheet, index=False)
+            print(f"✅ Conversion réussie : {file_xlsx}")
+        except Exception as e:
+            print(f"❌ Erreur lors de la conversion : {e}")
+    else:
+        print(f"✓ {file_xlsx} existe déjà. Conversion ignorée.")
+
+def extract_and_merge_excel(file_xlsx, file_csv):
+    """
+    Extrait et fusionne les feuilles Excel (sauf la première) en un unique CSV.
+    Les feuilles sont lues en ignorant les trois premières lignes (skiprows=3),
+    et une colonne "Année" est ajoutée à partir du nom de la feuille.
+    Le CSV est écrit avec le séparateur ';'.
+    """
+    if not os.path.exists(file_csv):
+        print("📥 Extraction et fusion des feuilles Excel...")
+        try:
+            # Charger le classeur XLSX
+            xls = pd.ExcelFile(file_xlsx)
+            # On ignore la première feuille (ex: "À savoir")
+            sheets_to_read = xls.sheet_names[1:]
+            dfs = []
+            for sheet in sheets_to_read:
+                print(f"📄 Traitement de la feuille : {sheet}")
+                df = pd.read_excel(xls, sheet_name=sheet, skiprows=3)
+                df["Année"] = sheet  # Ajouter l'année issue du nom de la feuille
+                dfs.append(df)
+            df_final = pd.concat(dfs, ignore_index=True)
+            # Sauvegarder en CSV avec le séparateur point-virgule
+            df_final.to_csv(file_csv, index=False, sep=";")
+            print(f"✅ Fichier CSV généré : {file_csv}")
+        except Exception as e:
+            print(f"❌ Erreur lors de l'extraction/fusion : {e}")
+    else:
+        print(f"✓ {file_csv} existe déjà. Extraction ignorée.")
 
 
 class DataExtractor:
@@ -387,59 +435,6 @@ class DataExtractor:
             logger.error(f"❌ Erreur extraction 2022 : {str(e)}")
             return None
         
-    def extract_demographic_data(self, excel_path):
-        """
-        Extrait les données démographiques directement à partir du fichier XLS.
-        
-        :param excel_path: Chemin du fichier Excel (format XLS ou XLSX)
-        :return: DataFrame Spark contenant les données fusionnées de toutes les années
-        """
-        if not os.path.exists(excel_path):
-            logger.error(f"❌ Fichier Excel non trouvé : {excel_path}")
-            return None
-
-        logger.info(f"📥 Extraction des données démographiques depuis : {excel_path}")
-        try:
-            # Définition des années (noms des feuilles) de 2023 à 1975
-            years = [str(year) for year in range(2023, 1974, -1)]
-            df_union = None
-
-            for year in years:
-                logger.info(f"📄 Traitement de la feuille : {year}")
-                
-                # Chargement de la feuille avec spark-excel
-                df_sheet = (
-                    self.spark.read.format("com.crealytics.spark.excel")
-                    .option("header", "true")
-                    .option("inferSchema", "true")
-                    .option("sheetName", year)
-                    .option("dataAddress", "A4") # Pour commencer à la ligne 4 (sauter l'en-tête)
-                    .load(excel_path)
-                )
-                
-                # Ajout d'une colonne pour l'année
-                df_sheet = df_sheet.withColumn("Année", lit(year))
-                
-                # Union progressive des DataFrames
-                if df_union is None:
-                    df_union = df_sheet
-                else:
-                    df_union = df_union.union(df_sheet)
-            
-            if df_union:
-                # Affichage des premières lignes pour vérification
-                logger.info("Aperçu des données extraites:")
-                df_union.show(5, truncate=False)
-                
-                return df_union
-            else:
-                logger.error("❌ Aucune donnée extraite des feuilles Excel")
-                return None
-
-        except Exception as e:
-            logger.error(f"❌ Erreur lors de l'extraction des données démographiques : {str(e)}")
-            logger.error(f"Détails: {traceback.format_exc()}")
-            return None
         
     def extract_life_expectancy_data(self, file_path):
         """
@@ -521,6 +516,54 @@ class DataExtractor:
         except Exception as e:
             logger.error(f"❌ Erreur lors du chargement du fichier d'éducation : {str(e)}")
             return None
+
+    def extract_demographic_data(self, excel_path):
+        """
+        Extrait les données démographiques à partir d'un fichier Excel (XLS ou XLSX).
+        Si le fichier est en XLS, il est converti en XLSX puis les feuilles (à partir de la deuxième)
+        sont fusionnées en un CSV. Ce CSV est ensuite lu par Spark pour obtenir un DataFrame.
+        """
+        if not os.path.exists(excel_path):
+            logger.error(f"❌ Fichier Excel non trouvé : {excel_path}")
+            return None
+
+        logger.info(f"📥 Extraction des données démographiques depuis : {excel_path}")
+
+        try:
+            # Déterminer l'extension et définir un chemin pour le CSV fusionné
+            base, ext = os.path.splitext(excel_path)
+            csv_path = base + "_merged.csv"
+
+            if ext.lower() == ".xls":
+                # Convertir le fichier XLS en XLSX
+                xlsx_path = base + ".xlsx"
+                logger.info("Conversion du fichier XLS en XLSX...")
+                convert_excel_to_xlsx(excel_path, xlsx_path)
+                logger.info(f"Conversion réussie : {xlsx_path}")
+                # Fusionner les feuilles de l'XLSX en CSV
+                logger.info("Fusion des feuilles Excel...")
+                extract_and_merge_excel(xlsx_path, csv_path)
+            elif ext.lower() == ".xlsx":
+                logger.info("Fusion des feuilles Excel...")
+                extract_and_merge_excel(excel_path, csv_path)
+            else:
+                logger.error("Format de fichier non supporté pour les données démographiques.")
+                return None
+
+            # Lecture du CSV fusionné avec Spark (le séparateur est ';')
+            df_union = self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
+            logger.info("✅ Fusion et lecture des données démographiques réussies.")
+            df_union.show(5, truncate=False)
+            return df_union
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de l'extraction des données démographiques : {str(e)}")
+            logger.error(f"Détails: {traceback.format_exc()}")
+            return None
+
+
+
+
+
 
 
     def stop(self):

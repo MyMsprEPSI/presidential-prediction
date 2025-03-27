@@ -945,6 +945,32 @@ class DataTransformer:
         logger.info("✅ Calcul terminé. Aperçu des statistiques :")
         df_grouped.show(10, truncate=False)
         return df_grouped
+    
+    def separate_demographic_totals(self, df):
+        """
+        Sépare les lignes de totaux (France métropolitaine, DOM, France métropolitaine et DOM)
+        du reste (lignes départementales).
+        """
+        from pyspark.sql.functions import col
+
+        # Filtre les lignes où 'Code_Département' contient "France" ou "DOM"
+        df_totaux = df.filter(
+            (col("Code_Département").contains("France")) | 
+            (col("Code_Département").contains("DOM")) |
+            (col("Code_Département").contains("Source"))  # Au besoin, pour exclure la ligne "Source : ..."
+        )
+        # Tout le reste est considéré comme départements
+        df_departements = df.subtract(df_totaux)
+
+        # On peut éventuellement trier
+        df_totaux = df_totaux.orderBy(col("Année").desc())
+        df_departements = df_departements.orderBy(col("Année").desc())
+
+        return df_totaux, df_departements
+
+
+
+
 
 
 

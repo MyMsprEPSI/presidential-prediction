@@ -302,19 +302,24 @@ def main():
     # ----------------------------------------------------------------
     # 4.6) TRANSFORMATION : nettoyage et sélection des données démographiques
     # ----------------------------------------------------------------
-    """df_demographie_transformed = transformer.transform_demographic_data(df_demographie)
-            
-    if df_demographie_transformed is None:
-        logger.error("❌ Transformation des données démographiques échouée.")
+        # Supposons que df_demographie est déjà transformé ou brut, selon votre pipeline
+    if df_demographie is not None:
+        # Séparons totaux et départements
+        df_totaux, df_departements = transformer.separate_demographic_totals(df_demographie)
+        
+        # Enregistrer chaque partie dans un fichier CSV distinct
+        #  - "population_totaux.csv"
+        #  - "population_par_departement.csv"
+        # On suppose qu'on utilise le loader pour ça :
+        
+        loader.save_to_csv(df_totaux, "population_totaux.csv")
+        loader.save_to_csv(df_departements, "population_par_departement.csv")
+        
+        logger.info("✅ Données démographiques enregistrées séparément (totaux / départements).")
     else:
-        # Séparation des totaux et des données départementales
-        df_departements, df_totaux = transformer.separate_demographic_totals(df_demographie_transformed)
-                
-        if df_departements is None or df_totaux is None:
-            logger.error("❌ Séparation des données démographiques échouée.")
-        else:
-            logger.info("✅ Transformation des données démographiques réussie")
-    """
+        logger.error("❌ Pas de données démographiques à séparer.")
+
+    
     # ----------------------------------------------------------------
     # 4.7) TRANSFORMATION : nettoyage et sélection des données d'éducation
     # ----------------------------------------------------------------
@@ -375,14 +380,8 @@ def main():
     # ----------------------------------------------------------------
     # 5.6) LOAD : Sauvegarde des données démographiques
     # ----------------------------------------------------------------
-    """output_dir_demo = "./data/demographie/output"
-    success = loader.save_demographic_data(df_departements, df_totaux, output_dir_demo)
-    
-    if success:
-        logger.info("✅ Sauvegarde des données démographiques réussie")
-    else:
-        logger.error("❌ Sauvegarde des données démographiques échouée.")
-    """
+    loader.save_to_csv(df_totaux, "./data/demographie/population_totaux.csv")
+    loader.save_to_csv(df_departements, "./data/demographie/population_par_departement.csv")
 
     # ----------------------------------------------------------------
     # 6) Arrêt de la session Spark
