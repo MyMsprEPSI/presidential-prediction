@@ -23,6 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def convert_excel_to_xlsx(file_xls, file_xlsx):
     """
     Convertit le fichier XLS en XLSX si ce dernier n'existe pas déjà.
@@ -40,6 +41,7 @@ def convert_excel_to_xlsx(file_xls, file_xlsx):
             print(f"❌ Erreur lors de la conversion : {e}")
     else:
         print(f"✓ {file_xlsx} existe déjà. Conversion ignorée.")
+
 
 def extract_and_merge_excel(file_xlsx, file_csv):
     """
@@ -90,6 +92,10 @@ class DataExtractor:
             .master(master)
             .config("spark.driver.host", "127.0.0.1")
             .config(
+                "spark.python.worker.reuse", "true"
+            )  # Réutiliser les workers Python
+            .config("spark.python.worker.timeout", "600")  # Augmenter le timeout
+            .config(
                 "spark.driver.extraClassPath",
                 "./database/connector/mysql-connector-j-9.1.0.jar;./database/connector/spark-excel_2.12-3.5.0_0.20.3.jar",
             )
@@ -98,6 +104,11 @@ class DataExtractor:
             .config("spark.executor.memory", "8g")
             .config("spark.memory.offHeap.enabled", "true")
             .config("spark.memory.offHeap.size", "8g")
+            # Ajouter le chemin Python explicite
+            .config(
+                "spark.pyspark.python", "python"
+            )  # ou le chemin complet vers votre exécutable Python
+            .config("spark.pyspark.driver.python", "python")  # ou le chemin complet
             .getOrCreate()
         )
 
@@ -579,7 +590,6 @@ class DataExtractor:
 
         logger.info("✅ Extraction des données de sécurité réussie")
         return df_spark
-        
 
     def extract_demography_data(self, file_xls, file_xlsx, file_csv):
         """
@@ -633,7 +643,9 @@ class DataExtractor:
         if not os.path.exists(file_path):
             logger.error(f"❌ Fichier non trouvé : {file_path}")
             return None
-        logger.info(f"📥 Extraction des données d'orientation politique depuis : {file_path}")
+        logger.info(
+            f"📥 Extraction des données d'orientation politique depuis : {file_path}"
+        )
         return self.spark.read.option("header", True).csv(file_path)
 
     def stop(self):

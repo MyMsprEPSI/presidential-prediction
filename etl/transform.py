@@ -12,7 +12,7 @@ from pyspark.sql.functions import (
     expr,
     trim,
     upper,
-    create_map
+    create_map,
 )
 from pyspark.sql.types import IntegerType, DoubleType, DateType
 from pyspark.sql.window import Window
@@ -35,7 +35,6 @@ class DataTransformer:
 
     def __init__(self):
         logger.info("🚀 Initialisation du DataTransformer")
-        pass
 
     def transform_environmental_data(self, df_env):
         """
@@ -88,10 +87,11 @@ class DataTransformer:
         # Tri des données par région et année
         df_final = df_final.orderBy("Code_INSEE_Région", "Année")
 
-        logger.info("✅ Transformation terminée ! Aperçu des données transformées :")
-        df_final.show(15, truncate=False)
-
-        return df_final
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Transformation terminée ! Aperçu des données transformées :",
+            df_final,
+            15,
+        )
 
     def transform_pib_outre_mer(self, df_pib, region_codes):
         """
@@ -141,12 +141,11 @@ class DataTransformer:
         # Tri final
         df_final = df_final.orderBy(["Code_INSEE_Région", "Année"])
 
-        logger.info(
-            "✅ Transformation PIB terminée ! Aperçu des données transformées :"
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Transformation PIB terminée ! Aperçu des données transformées :",
+            df_final,
+            10,
         )
-        df_final.show(10, truncate=False)
-
-        return df_final
 
     def fill_missing_pib_mayotte(self, df_pib):
         """
@@ -192,10 +191,9 @@ class DataTransformer:
             ["Code_INSEE_Région", "Année"]
         )
 
-        logger.info("✅ Remplissage PIB Mayotte terminé :")
-        df_final.show(10, truncate=False)
-
-        return df_final
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Remplissage PIB Mayotte terminé :", df_final, 10
+        )
 
     def combine_all_pib_data(self, df_pib_outremer, df_pib_xlsx, df_pib_2022):
         """
@@ -248,10 +246,9 @@ class DataTransformer:
         df_final = df_final.filter((col("Année") >= 2000) & (col("Année") <= 2022))
         df_final = df_final.orderBy(["Code_INSEE_Région", "Année"])
 
-        logger.info("✅ Fusion des données PIB réussie :")
-        df_final.show(10, truncate=False)
-
-        return df_final
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Fusion des données PIB réussie :", df_final, 10
+        )
 
     def transform_inflation_data(self, df_inflation):
         """
@@ -269,10 +266,11 @@ class DataTransformer:
         # Filtrer et trier les données
         df_transformed = df_inflation.orderBy("Année")
 
-        logger.info("✅ Transformation des données d'inflation réussie :")
-        df_transformed.show(10, truncate=False)
-
-        return df_transformed
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Transformation des données d'inflation réussie :",
+            df_transformed,
+            10,
+        )
 
     def combine_pib_and_inflation(self, df_pib, df_inflation):
         """
@@ -309,10 +307,9 @@ class DataTransformer:
         # Trier les résultats
         df_combined = df_combined.orderBy("Code_INSEE_Région", "Année")
 
-        logger.info("✅ Fusion des données PIB et Inflation réussie :")
-        df_combined.show(10, truncate=False)
-
-        return df_combined
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Fusion des données PIB et Inflation réussie :", df_combined, 10
+        )
 
     def transform_technologie_data(self, df):
         """
@@ -588,13 +585,11 @@ class DataTransformer:
 
         # Pour chaque département, on garde le candidat avec le maximum de voix
         w_dept = Window.partitionBy("annee", "code_dept").orderBy(F.desc("voix"))
-        df_2017_final = (
+        return (
             df_final_2017.withColumn("rank", F.row_number().over(w_dept))
             .filter(F.col("rank") == 1)
             .select("annee", "code_dept", "candidat", "voix")
         )
-
-        return df_2017_final
 
     def transform_election_data_2022(self, df_2022_raw):
         """
@@ -621,13 +616,12 @@ class DataTransformer:
 
         # On agrège par département pour sélectionner le candidat gagnant (le plus de voix)
         w_dept_2022 = Window.partitionBy("annee", "code_dept").orderBy(F.desc("voix"))
-        df_2022_final = (
+        return (
             df_2022.withColumn("rank", F.row_number().over(w_dept_2022))
             .filter(F.col("rank") == 1)
             .select("annee", "code_dept", "candidat", "voix")
         )
 
-        return df_2022_final
 
     def combine_all_years(self, df_1965_2012, df_2017, df_2022):
         """
@@ -894,10 +888,7 @@ class DataTransformer:
         # Conserver les données pour les autres départements
         df_other = df_final.filter(col("CODE_DEP") != "976")
 
-        # Fusionner et trier le DataFrame final
-        df_filled = df_other.unionByName(df_mayotte_filled).orderBy("CODE_DEP", "Année")
-
-        return df_filled
+        return df_other.unionByName(df_mayotte_filled).orderBy("CODE_DEP", "Année")
 
     def transform_education_data(self, df):
         """
@@ -954,9 +945,9 @@ class DataTransformer:
                 F.when(F.col("secteur_public_prive_libe") == "privé", 1).otherwise(0),
             )
 
-        logger.info("✅ Transformation des données d'éducation réussie.")
-        df.show(5, truncate=False)
-        return df
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Transformation des données d'éducation réussie.", df, 5
+        )
 
     def calculate_closed_by_year_and_dept_education(self, df):
         """
@@ -991,10 +982,9 @@ class DataTransformer:
             .orderBy("annee_fermeture", "code_departement")
         )
 
-        logger.info("✅ Calcul terminé. Aperçu des statistiques :")
-        df_grouped.show(10, truncate=False)
-        return df_grouped
-    
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Calcul terminé. Aperçu des statistiques :", df_grouped, 10
+        )
 
     def transform_security_data(self, df):
         """
@@ -1013,38 +1003,43 @@ class DataTransformer:
         logger.info("🚀 Transformation des données de sécurité...")
 
         try:
-            # Sélectionner uniquement les colonnes d'années (commençant par '_')
-            year_cols = [col for col in df.columns if col.startswith("_")]
-
-            # Créer l'expression pour le stack
-            stack_expr = []
-            for col in year_cols:
-                year = col.split("_")[1]
-                stack_expr.extend([f"'{year}'", col])
-
-            # Conversion format large vers long
-            df_long = df.select(
-                "departement",
-                expr(
-                    f"stack({len(year_cols)}, {','.join(stack_expr)}) as (annee, valeur)"
-                ),
-            )
-
-            # Aggrégation par département et année
-            df_final = (
-                df_long.groupBy("departement", "annee")
-                .agg(round(sum("valeur"), 0).alias("delits_total"))
-                .filter((col("annee") >= 1996) & (col("annee") <= 2022))
-                .orderBy("departement", "annee")
-            )
-
-            logger.info("✅ Transformation des données de sécurité réussie")
-            return df_final
-
+            return self._extracted_from_transform_security_data_19(df)
         except Exception as e:
             logger.error(f"❌ Erreur lors de la transformation : {str(e)}")
             return None
-        
+
+    # TODO Rename this here and in `transform_security_data`
+    def _extracted_from_transform_security_data_19(self, df):
+        # Sélectionner uniquement les colonnes d'années (commençant par '_')
+        year_cols = [col for col in df.columns if col.startswith("_")]
+
+        # Convertir toutes les colonnes numériques en double pour assurer la cohérence des types
+        for col_name in year_cols:
+            df = df.withColumn(col_name, F.col(col_name).cast("double"))
+
+        # Créer l'expression pour le stack
+        stack_expr = []
+        for col_name in year_cols:
+            year = col_name.split("_")[1]  # Extraire l'année de la colonne
+            stack_expr.extend([f"'{year}'", col_name])
+
+        # Conversion format large vers long
+        df_long = df.select(
+            "departement",
+            F.expr(f"stack({len(year_cols)}, {','.join(stack_expr)}) as (annee, valeur)")
+        )
+
+        # Aggrégation par département et année
+        df_final = (
+            df_long.groupBy("departement", "annee")
+            .agg(F.round(F.sum("valeur"), 0).alias("delits_total"))
+            .filter((F.col("annee") >= 1996) & (F.col("annee") <= 2022))
+            .orderBy("departement", "annee")
+        )
+
+        logger.info("✅ Transformation des données de sécurité réussie")
+        return df_final
+
     def transform_demography_data(self, df):
         """
         Transforme les données démographiques issues du CSV en :
@@ -1060,18 +1055,22 @@ class DataTransformer:
         logger.info("🚀 Transformation des données démographiques en cours...")
 
         # Renommage des colonnes principales
-        df = df.withColumnRenamed("Départements", "Code_Département") \
-               .withColumnRenamed("Unnamed: 1", "Nom_Département") \
-               .withColumnRenamed("Ensemble", "E_Total") \
-               .withColumnRenamed("Hommes", "H_Total") \
-               .withColumnRenamed("Femmes", "F_Total")
+        df = (
+            df.withColumnRenamed("Départements", "Code_Département")
+            .withColumnRenamed("Unnamed: 1", "Nom_Département")
+            .withColumnRenamed("Ensemble", "E_Total")
+            .withColumnRenamed("Hommes", "H_Total")
+            .withColumnRenamed("Femmes", "F_Total")
+        )
 
         # Renommage des colonnes pour les tranches d'âge
-        df = df.withColumnRenamed("Unnamed: 3", "E_0_19_ans") \
-               .withColumnRenamed("Unnamed: 4", "E_20_39_ans") \
-               .withColumnRenamed("Unnamed: 5", "E_40_59_ans") \
-               .withColumnRenamed("Unnamed: 6", "E_60_74_ans") \
-               .withColumnRenamed("Unnamed: 7", "E_75_et_plus")
+        df = (
+            df.withColumnRenamed("Unnamed: 3", "E_0_19_ans")
+            .withColumnRenamed("Unnamed: 4", "E_20_39_ans")
+            .withColumnRenamed("Unnamed: 5", "E_40_59_ans")
+            .withColumnRenamed("Unnamed: 6", "E_60_74_ans")
+            .withColumnRenamed("Unnamed: 7", "E_75_et_plus")
+        )
 
         # Filtrer les lignes d'en-tête ou de note (ex: lignes commençant par "Source")
         df = df.filter(~col("Code_Département").startswith("Source"))
@@ -1082,9 +1081,9 @@ class DataTransformer:
         else:
             df = df.orderBy("Code_Département")
 
-        logger.info("✅ Transformation des données démographiques terminée")
-        df.show(5, truncate=False)
-        return df
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Transformation des données démographiques terminée", df, 5
+        )
 
     def combine_election_and_orientation_politique(self, df_election, df_orientation):
         """
@@ -1093,10 +1092,14 @@ class DataTransformer:
         if df_election is None or df_orientation is None:
             logger.error("❌ Données invalides pour la combinaison")
 
-        logger.info("🚀 Combinaison des données électorales avec les données d'orientation politique...")
-        
+        logger.info(
+            "🚀 Combinaison des données électorales avec les données d'orientation politique..."
+        )
+
         # 3. Nettoyer les noms des candidats
-        df_election = df_election.withColumn("candidat_clean", trim(upper(col("candidat"))))
+        df_election = df_election.withColumn(
+            "candidat_clean", trim(upper(col("candidat")))
+        )
 
         # 4. Mapping candidat -> orientation politique
         candidate_to_orientation = {
@@ -1134,17 +1137,38 @@ class DataTransformer:
         }
 
         # 5. Ajouter la colonne orientation politique
-        orientation_expr = create_map([lit(k) for k in chain(*candidate_to_orientation.items())])
-        df_election = df_election.withColumn("orientation_politique", orientation_expr.getItem(col("candidat_clean")))
+        orientation_expr = create_map(
+            [lit(k) for k in chain(*candidate_to_orientation.items())]
+        )
+        df_election = df_election.withColumn(
+            "orientation_politique", orientation_expr.getItem(col("candidat_clean"))
+        )
 
         # 6. Créer le mapping orientation -> id à partir du fichier des partis
-        orientation_id_map = {row["Orientation politique"]: row["id"] for row in df_orientation.select("Orientation politique", "id").distinct().collect()}
-        orientation_id_expr = create_map([lit(k) for k in chain(*orientation_id_map.items())])
-        df_election = df_election.withColumn("id_parti", orientation_id_expr.getItem(col("orientation_politique")))
+        orientation_id_map = {
+            row["Orientation politique"]: row["id"]
+            for row in df_orientation.select("Orientation politique", "id")
+            .distinct()
+            .collect()
+        }
+        orientation_id_expr = create_map(
+            [lit(k) for k in chain(*orientation_id_map.items())]
+        )
+        df_election = df_election.withColumn(
+            "id_parti", orientation_id_expr.getItem(col("orientation_politique"))
+        )
 
         # Drop candidat_clean
         df_election = df_election.drop("candidat_clean")
-        
-        logger.info("✅ Combinaison des données électorales avec les données d'orientation politique terminée")
-        df_election.show(5, truncate=False)
-        return df_election
+
+        return self._extracted_from_combine_election_and_orientation_politique_52(
+            "✅ Combinaison des données électorales avec les données d'orientation politique terminée",
+            df_election,
+            5,
+        )
+
+    # TODO Rename this here and in `transform_environmental_data`, `transform_pib_outre_mer`, `fill_missing_pib_mayotte`, `combine_all_pib_data`, `transform_inflation_data`, `combine_pib_and_inflation`, `transform_education_data`, `calculate_closed_by_year_and_dept_education`, `transform_demography_data` and `combine_election_and_orientation_politique`
+    def _extracted_from_combine_election_and_orientation_politique_52(self, arg0, arg1, arg2):
+        logger.info(arg0)
+        arg1.show(arg2, truncate=False)
+        return arg1
