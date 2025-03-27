@@ -681,18 +681,21 @@ class DataTransformer:
 
     def transform_life_expectancy_data(self, df_life, df_departments):
         """
-        Transforme les données d'espérance de vie à la naissance pour hommes et femmes :
-        - Filtre les lignes dont le libellé commence par "Espérance de vie à la naissance - Hommes" ou "Espérance de vie à la naissance - Femmes"
-        - Extrait le genre et le département depuis le libellé
-        - Ne garde que les colonnes pour les années 2000 à 2022
-        - Convertit le format large en format long via STACK
-        - Effectue un pivot pour obtenir une ligne par département et par année avec deux colonnes pour l'espérance de vie
-        (Espérance_Vie_Homme et Espérance_Vie_Femme)
-        - Filtre pour ne conserver que les lignes dont le "Département" correspond à un département réel (et non une région)
-        - Joint avec le DataFrame des départements pour récupérer le code de département réel (CODE_DEP)
-        :param df_life: DataFrame PySpark contenant les données brutes d'espérance de vie
-        :param df_departments: DataFrame PySpark contenant les départements (colonnes : code_departement, nom_departement, etc.)
-        :return: DataFrame final avec colonnes CODE_DEP, Année, Espérance_Vie_Homme, Espérance_Vie_Femme
+        Transforme les données d'espérance de vie à la naissance pour hommes et femmes pour
+        obtenir une colonne unique "Espérance_Vie" correspondant à la moyenne des valeurs hommes et femmes.
+        
+        Étapes :
+        - Filtrage des lignes dont le libellé commence par "Espérance de vie à la naissance - Hommes" ou "Espérance de vie à la naissance - Femmes"
+        - Extraction du genre et du nom de département ou région depuis le libellé
+        - Sélection des colonnes des années (2000 à 2022) et conversion du format large en format long via STACK
+        - Pivot sur la colonne "Genre" pour obtenir deux colonnes ("Hommes" et "Femmes")
+        - Normalisation des noms pour ne conserver que les départements réels (à l'aide du DataFrame des départements)
+        - Jointure avec le DataFrame des départements pour récupérer le code département réel (CODE_DEP)
+        - Calcul de la moyenne de "Hommes" et "Femmes" et création d'une colonne unique "Espérance_Vie"
+        
+        :param df_life: DataFrame PySpark contenant les données brutes d'espérance de vie.
+        :param df_departments: DataFrame PySpark contenant les données des départements.
+        :return: DataFrame final avec colonnes CODE_DEP, Année, Espérance_Vie.
         """
         if df_life is None:
             logger.error("❌ Le DataFrame d'espérance de vie est vide ou invalide.")
@@ -702,27 +705,17 @@ class DataTransformer:
 
         # Filtrer les lignes d'intérêt
         df_filtered = df_life.filter(
-            (col("Libellé").rlike("^Espérance de vie à la naissance - Hommes"))
-            | (col("Libellé").rlike("^Espérance de vie à la naissance - Femmes"))
+            (col("Libellé").rlike("^Espérance de vie à la naissance - Hommes")) |
+            (col("Libellé").rlike("^Espérance de vie à la naissance - Femmes"))
         )
 
         # Extraire le genre et le "nom de département ou région" depuis le libellé
         df_filtered = df_filtered.withColumn(
             "Genre",
-            regexp_extract(
-                col("Libellé"),
-                r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)",
-                1,
-            ),
+            regexp_extract(col("Libellé"), r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)", 1)
         ).withColumn(
             "Département",
-            trim(
-                regexp_extract(
-                    col("Libellé"),
-                    r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)",
-                    2,
-                )
-            ),
+            trim(regexp_extract(col("Libellé"), r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)", 2))
         )
 
         # Sélectionner les colonnes des années de 2000 à 2022
@@ -736,159 +729,114 @@ class DataTransformer:
             n_years, ", ".join([f"'{year}', `{year}`" for year in years])
         )
         df_long = df_selected.select("Genre", "Département", expr(stack_expr))
-        df_long = df_long.withColumn(
-            "Annee", col("Annee").cast(IntegerType())
-        ).withColumn("Esperance_de_vie", col("Esperance_de_vie").cast(DoubleType()))
+        df_long = df_long.withColumn("Annee", col("Annee").cast(IntegerType())) \
+                        .withColumn("Esperance_de_vie", col("Esperance_de_vie").cast(DoubleType()))
         df_long = df_long.filter(col("Annee").between(2000, 2022))
 
         # Pivot pour créer des colonnes pour Hommes et Femmes
-        df_pivot = (
-            df_long.groupBy("Département", "Annee")
-            .pivot("Genre", ["Hommes", "Femmes"])
-            .agg(F.first("Esperance_de_vie"))
-        )
+        df_pivot = df_long.groupBy("Département", "Annee") \
+                        .pivot("Genre", ["Hommes", "Femmes"]) \
+                        .agg(F.first("Esperance_de_vie"))
 
         # Fonction de normalisation des noms
         def normalize_dept(column):
             norm = F.lower(trim(column))
-            # Remplacer les accents
+            # Remplacer les accents par leurs équivalents non accentués
             norm = F.translate(norm, "éèêëàâäîïôöùûüç", "eeeeaaaiioouuuc")
             # Supprimer tirets, apostrophes et espaces
             norm = F.regexp_replace(norm, "[-' ]", "")
             return norm
 
         # Appliquer la normalisation sur le DataFrame pivoté
-        df_pivot = df_pivot.withColumn(
-            "Département_norm", normalize_dept(col("Département"))
-        )
-        # Appliquer la même normalisation sur le DataFrame des départements
-        df_depts_norm = df_departments.withColumn(
-            "nom_departement_norm", normalize_dept(col("nom_departement"))
-        )
+        df_pivot = df_pivot.withColumn("Département_norm", normalize_dept(col("Département")))
+        # Normaliser le DataFrame des départements
+        df_depts_norm = df_departments.withColumn("nom_departement_norm", normalize_dept(col("nom_departement")))
 
-        # --- Filtrage pour ne conserver que les départements réels ---
-        # Collecter la liste des noms normalisés de départements à partir du CSV
-        valid_dept_names = [
-            row["nom_departement_norm"]
-            for row in df_depts_norm.select("nom_departement_norm").distinct().collect()
-        ]
-        logger.info(
-            "Liste des départements valides (normalisés) : "
-            + ", ".join(valid_dept_names)
-        )
-        # Filtrer les lignes dont le Département_norm figure dans cette liste
+        # Filtrage : ne conserver que les lignes correspondant à des départements réels
+        valid_dept_names = [row["nom_departement_norm"] for row in df_depts_norm.select("nom_departement_norm").distinct().collect()]
+        logger.info("Liste des départements valides (normalisés) : " + ", ".join(valid_dept_names))
         df_pivot = df_pivot.filter(col("Département_norm").isin(valid_dept_names))
-        # --- Fin du filtrage ---
 
         # Jointure pour associer le code de département réel
         df_joined = df_pivot.join(
             df_depts_norm,
             df_pivot["Département_norm"] == df_depts_norm["nom_departement_norm"],
-            "left",
+            "left"
         )
 
+        # Calcul de la moyenne des deux colonnes pour obtenir une seule colonne "Espérance_Vie"
         df_final = df_joined.select(
             df_depts_norm["code_departement"].alias("CODE_DEP"),
             col("Annee").alias("Année"),
-            col("Hommes").alias("Espérance_Vie_Homme"),
-            col("Femmes").alias("Espérance_Vie_Femme"),
+            round(((col("Hommes") + col("Femmes")) / 2), 2).alias("Espérance_Vie")
         ).orderBy("CODE_DEP", "Année")
 
         logger.info("✅ Transformation terminée ! Aperçu :")
         df_final.show(10, truncate=False)
 
-        # Affichage de débogage : lister les lignes non associées (si besoin)
+        # Affichage de débogage : lignes non associées (si besoin)
         df_unmatched = df_joined.filter(df_depts_norm["code_departement"].isNull())
         logger.info("Lignes non associées après jointure :")
-        df_unmatched.select("Département", "Département_norm").distinct().show(
-            truncate=False
-        )
+        df_unmatched.select("Département", "Département_norm").distinct().show(truncate=False)
 
         return df_final
+
 
     def fill_missing_mayotte_life_expectancy(self, df_final):
         """
         Complète les valeurs manquantes pour Mayotte (CODE_DEP = "976")
         dans le DataFrame final en utilisant une régression linéaire sur l'année.
-        On entraîne deux modèles (un pour les hommes et un pour les femmes) sur les données connues,
-        puis on prédit pour les années manquantes (ici, par exemple pour 2000-2013).
-
-        :param df_final: DataFrame final avec colonnes CODE_DEP, Année, Espérance_Vie_Homme, Espérance_Vie_Femme
-        :return: DataFrame final avec les valeurs manquantes pour Mayotte complétées et arrondies à 2 décimales
+        On entraîne un modèle sur les données connues (colonne 'Espérance_Vie')
+        puis on prédit pour les années manquantes.
+        
+        :param df_final: DataFrame final avec colonnes CODE_DEP, Année, Espérance_Vie
+        :return: DataFrame final avec les valeurs manquantes pour Mayotte complétées
+                et arrondies à 2 décimales.
         """
+        from pyspark.ml.feature import VectorAssembler
+        from pyspark.ml.regression import LinearRegression
+        from pyspark.sql.functions import col, when, round
 
         # Filtrer uniquement les données de Mayotte
         df_mayotte = df_final.filter(col("CODE_DEP") == "976")
-
-        # Pour les hommes
-        known_men = df_mayotte.filter(col("Espérance_Vie_Homme").isNotNull())
-        unknown_men = df_mayotte.filter(col("Espérance_Vie_Homme").isNull())
-
+        
+        # Séparer les données connues et inconnues pour la colonne "Espérance_Vie"
+        known = df_mayotte.filter(col("Espérance_Vie").isNotNull())
+        unknown = df_mayotte.filter(col("Espérance_Vie").isNull())
+        
+        # Préparer les données pour la régression
         assembler = VectorAssembler(inputCols=["Année"], outputCol="features")
-        train_men = assembler.transform(known_men).select(
-            "Année", "features", "Espérance_Vie_Homme"
+        train = assembler.transform(known).select("Année", "features", "Espérance_Vie")
+        
+        # Entraîner le modèle de régression linéaire
+        lr = LinearRegression(featuresCol="features", labelCol="Espérance_Vie")
+        model = lr.fit(train)
+        
+        # Prédire pour les années manquantes
+        pred = assembler.transform(unknown)
+        pred = model.transform(pred).select("Année", col("prediction").alias("pred_value"))
+        
+        # Remplacer les valeurs manquantes par la prédiction (arrondie à 2 décimales)
+        df_mayotte_filled = df_mayotte.alias("base").join(
+            pred.alias("pred"), on="Année", how="left"
+        ).withColumn(
+            "Espérance_Vie_new",
+            when(col("base.Espérance_Vie").isNull(), round(col("pred.pred_value"), 2))
+            .otherwise(round(col("base.Espérance_Vie"), 2))
+        ).select(
+            col("base.CODE_DEP").alias("CODE_DEP"),
+            col("base.Année").alias("Année"),
+            col("Espérance_Vie_new").alias("Espérance_Vie")
         )
-
-        lr_men = LinearRegression(
-            featuresCol="features", labelCol="Espérance_Vie_Homme"
-        )
-        model_men = lr_men.fit(train_men)
-
-        pred_men = assembler.transform(unknown_men)
-        pred_men = model_men.transform(pred_men).select(
-            "Année", col("prediction").alias("pred_men")
-        )
-
-        # Pour les femmes
-        known_women = df_mayotte.filter(col("Espérance_Vie_Femme").isNotNull())
-        unknown_women = df_mayotte.filter(col("Espérance_Vie_Femme").isNull())
-
-        train_women = assembler.transform(known_women).select(
-            "Année", "features", "Espérance_Vie_Femme"
-        )
-        lr_women = LinearRegression(
-            featuresCol="features", labelCol="Espérance_Vie_Femme"
-        )
-        model_women = lr_women.fit(train_women)
-
-        pred_women = assembler.transform(unknown_women)
-        pred_women = model_women.transform(pred_women).select(
-            "Année", col("prediction").alias("pred_women")
-        )
-
-        # Joindre les prédictions sur "Année"
-        pred_combined = pred_men.join(pred_women, on="Année", how="inner")
-
-        # Remplacer les valeurs manquantes par les prédictions en arrondissant à 2 décimales
-        df_mayotte_filled = (
-            df_mayotte.alias("base")
-            .join(pred_combined.alias("pred"), on="Année", how="left")
-            .withColumn(
-                "Espérance_Vie_Homme_new",
-                when(
-                    col("base.Espérance_Vie_Homme").isNull(),
-                    round(col("pred.pred_men"), 1),
-                ).otherwise(round(col("base.Espérance_Vie_Homme"), 1)),
-            )
-            .withColumn(
-                "Espérance_Vie_Femme_new",
-                when(
-                    col("base.Espérance_Vie_Femme").isNull(),
-                    round(col("pred.pred_women"), 1),
-                ).otherwise(round(col("base.Espérance_Vie_Femme"), 1)),
-            )
-            .select(
-                col("base.CODE_DEP").alias("CODE_DEP"),
-                col("base.Année").alias("Année"),
-                col("Espérance_Vie_Homme_new").alias("Espérance_Vie_Homme"),
-                col("Espérance_Vie_Femme_new").alias("Espérance_Vie_Femme"),
-            )
-        )
-
-        # Conserver les données pour les autres départements
+        
+        # Conserver les données des autres départements
         df_other = df_final.filter(col("CODE_DEP") != "976")
+        
+        # Fusionner et trier le DataFrame final
+        df_filled = df_other.unionByName(df_mayotte_filled).orderBy("CODE_DEP", "Année")
+        
+        return df_filled
 
-        return df_other.unionByName(df_mayotte_filled).orderBy("CODE_DEP", "Année")
 
     def transform_education_data(self, df):
         """
