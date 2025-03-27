@@ -60,13 +60,18 @@ def main():
     )
     election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
 
-    demo_file = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
+   
     education_file = "./data/education/fr-en-etablissements-fermes.csv"
     life_expectancy_file = "./data/sante/valeurs_annuelles.csv"
     departments_file_path = "./data/departements-france.csv"
 
     # Dans la section des chemins de fichiers
     security_excel_file = "./data/securite/tableaux-4001-ts.xlsx"
+
+    # Chemins pour la démographie
+    demo_file_xls = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
+    demo_file_xlsx = demo_file_xls.replace(".xls", ".xlsx")
+    demo_csv = "./data/demographie/demographie_fusion.csv"
 
     # ----------------------------------------------------------------
     # 2) Initialisation des objets ETL
@@ -144,12 +149,12 @@ def main():
     # ----------------------------------------------------------------
     # 3.6) EXTRACT : Charger les données de démographie
     # ----------------------------------------------------------------
-    df_demographie = extractor.extract_demographic_data(demo_file)
+    df_demographie = extractor.extract_demography_data(demo_file_xls, demo_file_xlsx, demo_csv)
     if df_demographie is None:
-        logger.error("❌ Extraction des données démographiques échouée.")
-    else:
-        logger.info("✅ Extraction des données démographiques réussie")
-        df_demographie.show(5, truncate=False)
+        logger.error("❌ Échec de l'extraction des données de démographie.")
+        return
+    logger.info("✅ Extraction des données de démographie réussie")
+    df_demographie.show(5, truncate=False)
     # ----------------------------------------------------------------
     # 3.7) EXTRACT : Charger les données d'éducation
     # ----------------------------------------------------------------
@@ -308,22 +313,13 @@ def main():
     # ----------------------------------------------------------------
     # 4.6) TRANSFORMATION : nettoyage et sélection des données démographiques
     # ----------------------------------------------------------------
-        # Supposons que df_demographie est déjà transformé ou brut, selon votre pipeline
-    if df_demographie is not None:
-        # Séparons totaux et départements
-        df_totaux, df_departements = transformer.separate_demographic_totals(df_demographie)
-        
-        # Enregistrer chaque partie dans un fichier CSV distinct
-        #  - "population_totaux.csv"
-        #  - "population_par_departement.csv"
-        # On suppose qu'on utilise le loader pour ça :
-        
-        loader.save_to_csv(df_totaux, "population_totaux.csv")
-        loader.save_to_csv(df_departements, "population_par_departement.csv")
-        
-        logger.info("✅ Données démographiques enregistrées séparément (totaux / départements).")
-    else:
-        logger.error("❌ Pas de données démographiques à séparer.")
+    df_demographie_transformed = transformer.transform_demography_data(df_demographie)
+    if df_demographie_transformed is None:
+        logger.error("❌ Échec de la transformation des données de démographie.")
+        return
+    logger.info("✅ Transformation des données de démographie réussie")
+    df_demographie_transformed.show(5, truncate=False)
+
 
     
     # ----------------------------------------------------------------
@@ -392,6 +388,10 @@ def main():
     # Dans la section LOAD
     output_path_security = "delits_par_departement_1996_2022.csv"
     loader.save_to_csv(df_security_transformed, output_path_security)
+
+
+    output_path_demographie = "demographie_final.csv"
+    loader.save_to_csv(df_demographie_transformed, demo_csv)
 
     # ----------------------------------------------------------------
     # 6) Arrêt de la session Spark

@@ -993,31 +993,6 @@ class DataTransformer:
         df_grouped.show(10, truncate=False)
         return df_grouped
     
-    def separate_demographic_totals(self, df):
-        """
-        Sépare les lignes de totaux (France métropolitaine, DOM, France métropolitaine et DOM)
-        du reste (lignes départementales).
-        """
-        from pyspark.sql.functions import col
-
-        # Filtre les lignes où 'Code_Département' contient "France" ou "DOM"
-        df_totaux = df.filter(
-            (col("Code_Département").contains("France")) | 
-            (col("Code_Département").contains("DOM")) |
-            (col("Code_Département").contains("Source"))  # Au besoin, pour exclure la ligne "Source : ..."
-        )
-        # Tout le reste est considéré comme départements
-        df_departements = df.subtract(df_totaux)
-
-        # On peut éventuellement trier
-        df_totaux = df_totaux.orderBy(col("Année").desc())
-        df_departements = df_departements.orderBy(col("Année").desc())
-
-        return df_totaux, df_departements
-
-
-
-
 
     def transform_security_data(self, df):
         """
@@ -1067,3 +1042,44 @@ class DataTransformer:
         except Exception as e:
             logger.error(f"❌ Erreur lors de la transformation : {str(e)}")
             return None
+        
+    def transform_demography_data(self, df):
+        """
+        Transforme les données démographiques issues du CSV en :
+          - Renommant les colonnes
+          - Filtrant les lignes inutiles
+          - Réorganisant les colonnes
+        Cette logique est inspirée du code de transform_demoV2.
+        """
+        if df is None:
+            logger.error("❌ Le DataFrame de démographie est vide ou invalide.")
+            return None
+
+        logger.info("🚀 Transformation des données démographiques en cours...")
+
+        # Renommage des colonnes principales
+        df = df.withColumnRenamed("Départements", "Code_Département") \
+               .withColumnRenamed("Unnamed: 1", "Nom_Département") \
+               .withColumnRenamed("Ensemble", "E_Total") \
+               .withColumnRenamed("Hommes", "H_Total") \
+               .withColumnRenamed("Femmes", "F_Total")
+
+        # Renommage des colonnes pour les tranches d'âge
+        df = df.withColumnRenamed("Unnamed: 3", "E_0_19_ans") \
+               .withColumnRenamed("Unnamed: 4", "E_20_39_ans") \
+               .withColumnRenamed("Unnamed: 5", "E_40_59_ans") \
+               .withColumnRenamed("Unnamed: 6", "E_60_74_ans") \
+               .withColumnRenamed("Unnamed: 7", "E_75_et_plus")
+
+        # Filtrer les lignes d'en-tête ou de note (ex: lignes commençant par "Source")
+        df = df.filter(~col("Code_Département").startswith("Source"))
+
+        # Tri par année si la colonne existe, sinon par Code_Département
+        if "Année" in df.columns:
+            df = df.orderBy(col("Année").desc())
+        else:
+            df = df.orderBy("Code_Département")
+
+        logger.info("✅ Transformation des données démographiques terminée")
+        df.show(5, truncate=False)
+        return df
