@@ -14,6 +14,8 @@ from pyspark.sql.functions import col, lit, regexp_extract
 import glob
 import logging
 import traceback
+from functools import reduce
+import pandas as pd
 
 # Configuration du logger
 logging.basicConfig(
@@ -183,8 +185,6 @@ class DataExtractor:
             logger.error("❌ Aucun fichier PIB valide trouvé.")
             return None
 
-        from functools import reduce
-
         return reduce(lambda df1, df2: df1.union(df2), dfs)
 
     def extract_pib_excel(self, excel_path):
@@ -305,7 +305,6 @@ class DataExtractor:
         logger.info("✅ Extraction des données d'inflation réussie :")
         df_filtered.show(10, truncate=False)
         return df_filtered
-    
 
     def _load_inflation_data(self, excel_path, schema):
         """Charge les données d'inflation depuis Excel avec le schéma spécifié."""
@@ -434,14 +433,71 @@ class DataExtractor:
         except Exception as e:
             logger.error(f"❌ Erreur extraction 2022 : {str(e)}")
             return None
-        
-        
+
+    def extract_demographic_data(self, excel_path):
+        """
+        Extrait les données démographiques directement à partir du fichier XLS.
+
+        :param excel_path: Chemin du fichier Excel (format XLS ou XLSX)
+        :return: DataFrame Spark contenant les données fusionnées de toutes les années
+        """
+        if not os.path.exists(excel_path):
+            logger.error(f"❌ Fichier Excel non trouvé : {excel_path}")
+            return None
+
+        logger.info(f"📥 Extraction des données démographiques depuis : {excel_path}")
+        try:
+            # Définition des années (noms des feuilles) de 2023 à 1975
+            years = [str(year) for year in range(2023, 1974, -1)]
+            df_union = None
+
+            for year in years:
+                logger.info(f"📄 Traitement de la feuille : {year}")
+
+                # Chargement de la feuille avec spark-excel
+                df_sheet = (
+                    self.spark.read.format("com.crealytics.spark.excel")
+                    .option("header", "true")
+                    .option("inferSchema", "true")
+                    .option("sheetName", year)
+                    .option(
+                        "dataAddress", "A4"
+                    )  # Pour commencer à la ligne 4 (sauter l'en-tête)
+                    .load(excel_path)
+                )
+
+                # Ajout d'une colonne pour l'année
+                df_sheet = df_sheet.withColumn("Année", lit(year))
+
+                # Union progressive des DataFrames
+                if df_union is None:
+                    df_union = df_sheet
+                else:
+                    df_union = df_union.union(df_sheet)
+
+            if df_union:
+                # Affichage des premières lignes pour vérification
+                logger.info("Aperçu des données extraites:")
+                df_union.show(5, truncate=False)
+
+                return df_union
+            else:
+                logger.error("❌ Aucune donnée extraite des feuilles Excel")
+                return None
+
+        except Exception as e:
+            logger.error(
+                f"❌ Erreur lors de l'extraction des données démographiques : {str(e)}"
+            )
+            logger.error(f"Détails: {traceback.format_exc()}")
+            return None
+
     def extract_life_expectancy_data(self, file_path):
         """
         Charge le fichier CSV 'valeurs_anuelles.csv' contenant les données d'espérance de vie à la naissance.
         Le fichier est structuré avec une ligne d'en-tête contenant :
         "Libellé";"idBank";"Dernière mise à jour";"Période";"1901";"1902"; ... ;"2024"
-        
+
         :param file_path: Chemin du fichier CSV à charger
         :return: DataFrame PySpark contenant les données brutes d'espérance de vie
         """
@@ -449,22 +505,28 @@ class DataExtractor:
             logger.error(f"❌ Fichier non trouvé : {file_path}")
             return None
 
-        logger.info(f"📥 Extraction des données d'espérance de vie depuis : {file_path}")
+        logger.info(
+            f"📥 Extraction des données d'espérance de vie depuis : {file_path}"
+        )
 
         try:
-            return self.spark.read.option("header", "true") \
-                .option("delimiter", ";") \
-                .option("inferSchema", "true") \
+            return (
+                self.spark.read.option("header", "true")
+                .option("delimiter", ";")
+                .option("inferSchema", "true")
                 .csv(file_path)
+            )
         except Exception as e:
-            logger.error(f"❌ Erreur lors de l'extraction des données d'espérance de vie : {str(e)}")
+            logger.error(
+                f"❌ Erreur lors de l'extraction des données d'espérance de vie : {str(e)}"
+            )
             return None
-        
+
     def extract_departments_data(self, file_path):
         """
         Extrait les données des départements depuis le fichier CSV "departements-france.csv".
         Le fichier contient les colonnes : code_departement, nom_departement, code_region, nom_region.
-        
+
         :param file_path: Chemin du fichier CSV des départements.
         :return: DataFrame PySpark avec les données des départements.
         """
@@ -473,19 +535,23 @@ class DataExtractor:
             return None
 
         logger.info(f"📥 Extraction des données de départements depuis : {file_path}")
-        
-        schema = StructType([
-            StructField("code_departement", StringType(), True),
-            StructField("nom_departement", StringType(), True),
-            StructField("code_region", StringType(), True),
-            StructField("nom_region", StringType(), True),
-        ])
+
+        schema = StructType(
+            [
+                StructField("code_departement", StringType(), True),
+                StructField("nom_departement", StringType(), True),
+                StructField("code_region", StringType(), True),
+                StructField("nom_region", StringType(), True),
+            ]
+        )
 
         try:
-            return self.spark.read.option("header", "true") \
-                     .option("delimiter", ",") \
-                     .schema(schema) \
-                     .csv(file_path)
+            return (
+                self.spark.read.option("header", "true")
+                .option("delimiter", ",")
+                .schema(schema)
+                .csv(file_path)
+            )
         except Exception as e:
             logger.error(f"❌ Erreur lors de l'extraction des départements : {str(e)}")
             return None
@@ -494,7 +560,7 @@ class DataExtractor:
         """
         Extrait les données d'éducation depuis un fichier CSV.
         Le fichier est attendu avec un en-tête, un séparateur ';' et un encodage UTF-8.
-        
+
         :param input_path: Chemin du fichier CSV d'éducation.
         :return: DataFrame PySpark contenant les données d'éducation.
         """
@@ -504,67 +570,70 @@ class DataExtractor:
 
         logger.info(f"📥 Extraction des données d'éducation depuis : {input_path}")
         try:
-            df = self.spark.read \
-                .option("header", "true") \
-                .option("sep", ";") \
-                .option("encoding", "UTF-8") \
+            df = (
+                self.spark.read.option("header", "true")
+                .option("sep", ";")
+                .option("encoding", "UTF-8")
                 .csv(input_path)
-            logger.info(f"✓ Données d'éducation chargées avec succès depuis {input_path}")
+            )
+            logger.info(
+                f"✓ Données d'éducation chargées avec succès depuis {input_path}"
+            )
             logger.info(f"✓ Nombre de lignes: {df.count()}")
             logger.info(f"✓ Colonnes présentes: {', '.join(df.columns)}")
             return df
         except Exception as e:
-            logger.error(f"❌ Erreur lors du chargement du fichier d'éducation : {str(e)}")
+            logger.error(
+                f"❌ Erreur lors du chargement du fichier d'éducation : {str(e)}"
+            )
             return None
 
-    def extract_demographic_data(self, excel_path):
+    def extract_security_data(self, excel_path):
         """
-        Extrait les données démographiques à partir d'un fichier Excel (XLS ou XLSX).
-        Si le fichier est en XLS, il est converti en XLSX puis les feuilles (à partir de la deuxième)
-        sont fusionnées en un CSV. Ce CSV est ensuite lu par Spark pour obtenir un DataFrame.
+        Extrait les données de sécurité depuis le fichier Excel des tableaux 4001
+        en utilisant pandas pour une lecture plus rapide.
+
+        :param excel_path: Chemin du fichier Excel contenant les données de sécurité
+        :return: DataFrame PySpark avec les données brutes
         """
         if not os.path.exists(excel_path):
-            logger.error(f"❌ Fichier Excel non trouvé : {excel_path}")
+            logger.error(f"❌ Fichier non trouvé : {excel_path}")
             return None
 
-        logger.info(f"📥 Extraction des données démographiques depuis : {excel_path}")
+        logger.info(f"📥 Extraction des données de sécurité depuis : {excel_path}")
 
         try:
-            # Déterminer l'extension et définir un chemin pour le CSV fusionné
-            base, ext = os.path.splitext(excel_path)
-            csv_path = base + "_merged.csv"
+            import pandas as pd
 
-            if ext.lower() == ".xls":
-                # Convertir le fichier XLS en XLSX
-                xlsx_path = base + ".xlsx"
-                logger.info("Conversion du fichier XLS en XLSX...")
-                convert_excel_to_xlsx(excel_path, xlsx_path)
-                logger.info(f"Conversion réussie : {xlsx_path}")
-                # Fusionner les feuilles de l'XLSX en CSV
-                logger.info("Fusion des feuilles Excel...")
-                extract_and_merge_excel(xlsx_path, csv_path)
-            elif ext.lower() == ".xlsx":
-                logger.info("Fusion des feuilles Excel...")
-                extract_and_merge_excel(excel_path, csv_path)
-            else:
-                logger.error("Format de fichier non supporté pour les données démographiques.")
-                return None
+            # Lire les noms des feuilles
+            xls = pd.ExcelFile(excel_path)
+            dept_sheets = [sheet for sheet in xls.sheet_names if sheet.isdigit()]
 
-            # Lecture du CSV fusionné avec Spark (le séparateur est ';')
-            df_union = self.spark.read.option("header", "true").option("sep", ";").csv(csv_path)
-            logger.info("✅ Fusion et lecture des données démographiques réussies.")
-            df_union.show(5, truncate=False)
-            return df_union
+            # Liste pour stocker les DataFrames pandas
+            all_dfs = []
+
+            # Lire chaque feuille avec pandas
+            for dept in dept_sheets:
+                logger.info(f"📄 Lecture de la feuille du département {dept}")
+                df_sheet = pd.read_excel(excel_path, sheet_name=dept)
+                df_sheet["departement"] = dept
+                all_dfs.append(df_sheet)
+
+            # Combiner tous les DataFrames pandas
+            df_combined = pd.concat(all_dfs, ignore_index=True)
+
+            # Convertir le DataFrame pandas en DataFrame Spark
+            df_spark = self.spark.createDataFrame(df_combined)
+
+            logger.info("✅ Extraction des données de sécurité réussie")
+            return df_spark
+
         except Exception as e:
-            logger.error(f"❌ Erreur lors de l'extraction des données démographiques : {str(e)}")
-            logger.error(f"Détails: {traceback.format_exc()}")
+            logger.error(
+                f"❌ Erreur lors de l'extraction des données de sécurité : {str(e)}"
+            )
+            logger.error(f"Détails : {traceback.format_exc()}")
             return None
-
-
-
-
-
-
 
     def stop(self):
         """

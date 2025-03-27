@@ -19,8 +19,6 @@ from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
 
 
-
-
 # Configuration du logger
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -347,9 +345,7 @@ class DataTransformer:
         """Sélectionne et renomme les colonnes."""
         return df.select(
             col("_c0").alias("annee").cast("string"),
-            col("DIRD/PIB  France")
-            .alias("dird_pib_france_pourcentages")
-            .cast("float"),
+            col("DIRD/PIB  France").alias("dird_pib_france_pourcentages").cast("float"),
         )
 
     def _round_percentages(self, df):
@@ -368,8 +364,7 @@ class DataTransformer:
         return df.withColumn(
             "annee", when(col("annee") == "NaN", "2023").otherwise(col("annee"))
         )
-        
-        
+
     def transform_election_data_1965_2012(self, list_df):
         """
         Transforme et agrège les fichiers CSV 1965-2012.
@@ -687,7 +682,7 @@ class DataTransformer:
         df_final_csv = df_final_csv.orderBy("annee", "code_dept")
 
         return df_final_csv
-    
+
     def transform_life_expectancy_data(self, df_life, df_departments):
         """
         Transforme les données d'espérance de vie à la naissance pour hommes et femmes :
@@ -711,17 +706,27 @@ class DataTransformer:
 
         # Filtrer les lignes d'intérêt
         df_filtered = df_life.filter(
-            (col("Libellé").rlike("^Espérance de vie à la naissance - Hommes")) |
-            (col("Libellé").rlike("^Espérance de vie à la naissance - Femmes"))
+            (col("Libellé").rlike("^Espérance de vie à la naissance - Hommes"))
+            | (col("Libellé").rlike("^Espérance de vie à la naissance - Femmes"))
         )
 
         # Extraire le genre et le "nom de département ou région" depuis le libellé
         df_filtered = df_filtered.withColumn(
             "Genre",
-            regexp_extract(col("Libellé"), r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)", 1)
+            regexp_extract(
+                col("Libellé"),
+                r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)",
+                1,
+            ),
         ).withColumn(
             "Département",
-            trim(regexp_extract(col("Libellé"), r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)", 2))
+            trim(
+                regexp_extract(
+                    col("Libellé"),
+                    r"Espérance de vie à la naissance - (Hommes|Femmes) - (.*)",
+                    2,
+                )
+            ),
         )
 
         # Sélectionner les colonnes des années de 2000 à 2022
@@ -732,17 +737,20 @@ class DataTransformer:
         # Conversion du format large en format long via STACK
         n_years = len(years)
         stack_expr = "stack({0}, {1}) as (Annee, Esperance_de_vie)".format(
-            n_years,
-            ", ".join([f"'{year}', `{year}`" for year in years])
+            n_years, ", ".join([f"'{year}', `{year}`" for year in years])
         )
         df_long = df_selected.select("Genre", "Département", expr(stack_expr))
-        df_long = df_long.withColumn("Annee", col("Annee").cast(IntegerType())) \
-                        .withColumn("Esperance_de_vie", col("Esperance_de_vie").cast(DoubleType()))
+        df_long = df_long.withColumn(
+            "Annee", col("Annee").cast(IntegerType())
+        ).withColumn("Esperance_de_vie", col("Esperance_de_vie").cast(DoubleType()))
         df_long = df_long.filter(col("Annee").between(2000, 2022))
 
         # Pivot pour créer des colonnes pour Hommes et Femmes
-        df_pivot = df_long.groupBy("Département", "Annee").pivot("Genre", ["Hommes", "Femmes"]) \
-                        .agg(F.first("Esperance_de_vie"))
+        df_pivot = (
+            df_long.groupBy("Département", "Annee")
+            .pivot("Genre", ["Hommes", "Femmes"])
+            .agg(F.first("Esperance_de_vie"))
+        )
 
         # Fonction de normalisation des noms
         def normalize_dept(column):
@@ -754,14 +762,24 @@ class DataTransformer:
             return norm
 
         # Appliquer la normalisation sur le DataFrame pivoté
-        df_pivot = df_pivot.withColumn("Département_norm", normalize_dept(col("Département")))
+        df_pivot = df_pivot.withColumn(
+            "Département_norm", normalize_dept(col("Département"))
+        )
         # Appliquer la même normalisation sur le DataFrame des départements
-        df_depts_norm = df_departments.withColumn("nom_departement_norm", normalize_dept(col("nom_departement")))
+        df_depts_norm = df_departments.withColumn(
+            "nom_departement_norm", normalize_dept(col("nom_departement"))
+        )
 
         # --- Filtrage pour ne conserver que les départements réels ---
         # Collecter la liste des noms normalisés de départements à partir du CSV
-        valid_dept_names = [row["nom_departement_norm"] for row in df_depts_norm.select("nom_departement_norm").distinct().collect()]
-        logger.info("Liste des départements valides (normalisés) : " + ", ".join(valid_dept_names))
+        valid_dept_names = [
+            row["nom_departement_norm"]
+            for row in df_depts_norm.select("nom_departement_norm").distinct().collect()
+        ]
+        logger.info(
+            "Liste des départements valides (normalisés) : "
+            + ", ".join(valid_dept_names)
+        )
         # Filtrer les lignes dont le Département_norm figure dans cette liste
         df_pivot = df_pivot.filter(col("Département_norm").isin(valid_dept_names))
         # --- Fin du filtrage ---
@@ -770,14 +788,14 @@ class DataTransformer:
         df_joined = df_pivot.join(
             df_depts_norm,
             df_pivot["Département_norm"] == df_depts_norm["nom_departement_norm"],
-            "left"
+            "left",
         )
 
         df_final = df_joined.select(
             df_depts_norm["code_departement"].alias("CODE_DEP"),
             col("Annee").alias("Année"),
             col("Hommes").alias("Espérance_Vie_Homme"),
-            col("Femmes").alias("Espérance_Vie_Femme")
+            col("Femmes").alias("Espérance_Vie_Femme"),
         ).orderBy("CODE_DEP", "Année")
 
         logger.info("✅ Transformation terminée ! Aperçu :")
@@ -786,10 +804,11 @@ class DataTransformer:
         # Affichage de débogage : lister les lignes non associées (si besoin)
         df_unmatched = df_joined.filter(df_depts_norm["code_departement"].isNull())
         logger.info("Lignes non associées après jointure :")
-        df_unmatched.select("Département", "Département_norm").distinct().show(truncate=False)
+        df_unmatched.select("Département", "Département_norm").distinct().show(
+            truncate=False
+        )
 
         return df_final
-    
 
     def fill_missing_mayotte_life_expectancy(self, df_final):
         """
@@ -802,65 +821,82 @@ class DataTransformer:
         :return: DataFrame final avec les valeurs manquantes pour Mayotte complétées et arrondies à 2 décimales
         """
 
-
         # Filtrer uniquement les données de Mayotte
         df_mayotte = df_final.filter(col("CODE_DEP") == "976")
-        
+
         # Pour les hommes
         known_men = df_mayotte.filter(col("Espérance_Vie_Homme").isNotNull())
         unknown_men = df_mayotte.filter(col("Espérance_Vie_Homme").isNull())
-        
+
         assembler = VectorAssembler(inputCols=["Année"], outputCol="features")
-        train_men = assembler.transform(known_men).select("Année", "features", "Espérance_Vie_Homme")
-        
-        lr_men = LinearRegression(featuresCol="features", labelCol="Espérance_Vie_Homme")
+        train_men = assembler.transform(known_men).select(
+            "Année", "features", "Espérance_Vie_Homme"
+        )
+
+        lr_men = LinearRegression(
+            featuresCol="features", labelCol="Espérance_Vie_Homme"
+        )
         model_men = lr_men.fit(train_men)
-        
+
         pred_men = assembler.transform(unknown_men)
-        pred_men = model_men.transform(pred_men).select("Année", col("prediction").alias("pred_men"))
-        
+        pred_men = model_men.transform(pred_men).select(
+            "Année", col("prediction").alias("pred_men")
+        )
+
         # Pour les femmes
         known_women = df_mayotte.filter(col("Espérance_Vie_Femme").isNotNull())
         unknown_women = df_mayotte.filter(col("Espérance_Vie_Femme").isNull())
-        
-        train_women = assembler.transform(known_women).select("Année", "features", "Espérance_Vie_Femme")
-        lr_women = LinearRegression(featuresCol="features", labelCol="Espérance_Vie_Femme")
+
+        train_women = assembler.transform(known_women).select(
+            "Année", "features", "Espérance_Vie_Femme"
+        )
+        lr_women = LinearRegression(
+            featuresCol="features", labelCol="Espérance_Vie_Femme"
+        )
         model_women = lr_women.fit(train_women)
-        
+
         pred_women = assembler.transform(unknown_women)
-        pred_women = model_women.transform(pred_women).select("Année", col("prediction").alias("pred_women"))
-        
+        pred_women = model_women.transform(pred_women).select(
+            "Année", col("prediction").alias("pred_women")
+        )
+
         # Joindre les prédictions sur "Année"
         pred_combined = pred_men.join(pred_women, on="Année", how="inner")
-        
+
         # Remplacer les valeurs manquantes par les prédictions en arrondissant à 2 décimales
-        df_mayotte_filled = df_mayotte.alias("base").join(
-            pred_combined.alias("pred"),
-            on="Année",
-            how="left"
-        ).withColumn(
-            "Espérance_Vie_Homme_new",
-            when(col("base.Espérance_Vie_Homme").isNull(), round(col("pred.pred_men"), 1))
-            .otherwise(round(col("base.Espérance_Vie_Homme"), 1))
-        ).withColumn(
-            "Espérance_Vie_Femme_new",
-            when(col("base.Espérance_Vie_Femme").isNull(), round(col("pred.pred_women"), 1))
-            .otherwise(round(col("base.Espérance_Vie_Femme"), 1))
-        ).select(
-            col("base.CODE_DEP").alias("CODE_DEP"),
-            col("base.Année").alias("Année"),
-            col("Espérance_Vie_Homme_new").alias("Espérance_Vie_Homme"),
-            col("Espérance_Vie_Femme_new").alias("Espérance_Vie_Femme")
+        df_mayotte_filled = (
+            df_mayotte.alias("base")
+            .join(pred_combined.alias("pred"), on="Année", how="left")
+            .withColumn(
+                "Espérance_Vie_Homme_new",
+                when(
+                    col("base.Espérance_Vie_Homme").isNull(),
+                    round(col("pred.pred_men"), 1),
+                ).otherwise(round(col("base.Espérance_Vie_Homme"), 1)),
+            )
+            .withColumn(
+                "Espérance_Vie_Femme_new",
+                when(
+                    col("base.Espérance_Vie_Femme").isNull(),
+                    round(col("pred.pred_women"), 1),
+                ).otherwise(round(col("base.Espérance_Vie_Femme"), 1)),
+            )
+            .select(
+                col("base.CODE_DEP").alias("CODE_DEP"),
+                col("base.Année").alias("Année"),
+                col("Espérance_Vie_Homme_new").alias("Espérance_Vie_Homme"),
+                col("Espérance_Vie_Femme_new").alias("Espérance_Vie_Femme"),
+            )
         )
-        
+
         # Conserver les données pour les autres départements
         df_other = df_final.filter(col("CODE_DEP") != "976")
-        
+
         # Fusionner et trier le DataFrame final
         df_filled = df_other.unionByName(df_mayotte_filled).orderBy("CODE_DEP", "Année")
-        
+
         return df_filled
-    
+
     def transform_education_data(self, df):
         """
         Transforme et nettoie les données d'éducation issues du CSV 'fr-en-etablissements-fermes.csv'.
@@ -871,7 +907,7 @@ class DataTransformer:
           3. Conversion de la colonne "date_fermeture" en type Date et extraction de l'année dans "annee_fermeture".
           4. Normalisation du code postal : remplacement des valeurs nulles par "00000", puis suppression des espaces.
           5. Séparation des secteurs public et privé à partir de la colonne "secteur_public_prive_libe".
-        :param df: DataFrame Spark brut issu du fichier CSV d’éducation.
+        :param df: DataFrame Spark brut issu du fichier CSV d'éducation.
         :return: DataFrame nettoyé et transformé.
         """
 
@@ -884,32 +920,36 @@ class DataTransformer:
         for column in df.columns:
             df = df.withColumn(
                 column,
-                F.when(F.col(column).isNotNull(), F.trim(F.lower(F.col(column))))
-                .otherwise(F.lit("non spécifié"))
+                F.when(
+                    F.col(column).isNotNull(), F.trim(F.lower(F.col(column)))
+                ).otherwise(F.lit("non spécifié")),
             )
 
         # 3. Conversion de 'date_fermeture' en DateType et extraction de l'année
         if "date_fermeture" in df.columns:
-            df = df.withColumn("date_fermeture", F.col("date_fermeture").cast(DateType()))
+            df = df.withColumn(
+                "date_fermeture", F.col("date_fermeture").cast(DateType())
+            )
             df = df.withColumn("annee_fermeture", F.year(F.col("date_fermeture")))
 
         # 4. Normalisation du code postal
         if "code_postal" in df.columns:
             df = df.withColumn(
                 "code_postal",
-                F.when(F.col("code_postal").isNull(), F.lit("00000"))
-                .otherwise(F.trim(F.col("code_postal")))
+                F.when(F.col("code_postal").isNull(), F.lit("00000")).otherwise(
+                    F.trim(F.col("code_postal"))
+                ),
             )
 
         # 5. Séparation du secteur public/privé
         if "secteur_public_prive_libe" in df.columns:
             df = df.withColumn(
                 "secteur_public",
-                F.when(F.col("secteur_public_prive_libe") == "public", 1).otherwise(0)
+                F.when(F.col("secteur_public_prive_libe") == "public", 1).otherwise(0),
             )
             df = df.withColumn(
                 "secteur_prive",
-                F.when(F.col("secteur_public_prive_libe") == "privé", 1).otherwise(0)
+                F.when(F.col("secteur_public_prive_libe") == "privé", 1).otherwise(0),
             )
 
         logger.info("✅ Transformation des données d'éducation réussie.")
@@ -918,7 +958,7 @@ class DataTransformer:
 
     def calculate_closed_by_year_and_dept_education(self, df):
         """
-        Calcule le nombre d'établissements fermés par année et par département à partir des données d’éducation.
+        Calcule le nombre d'établissements fermés par année et par département à partir des données d'éducation.
         Regroupe par 'annee_fermeture', 'code_departement' et 'libelle_departement', puis agrège :
           - Le nombre total d'établissements (count sur "numero_uai"),
           - Le nombre d'établissements fermés dans le secteur public (sum de "secteur_public"),
@@ -929,18 +969,25 @@ class DataTransformer:
         :return: DataFrame avec les statistiques par année et département.
         """
 
+        logger.info(
+            "🚀 Calcul des statistiques de fermetures d'établissements par département et année..."
+        )
 
-        logger.info("🚀 Calcul des statistiques de fermetures d'établissements par département et année...")
-
-        df_grouped = df.groupBy("annee_fermeture", "code_departement", "libelle_departement") \
+        df_grouped = (
+            df.groupBy("annee_fermeture", "code_departement", "libelle_departement")
             .agg(
                 F.count("numero_uai").alias("nombre_total_etablissements"),
                 F.sum("secteur_public").alias("nb_public"),
                 F.sum("secteur_prive").alias("nb_prive"),
-                F.round((F.sum("secteur_public") * 100.0 / F.count("*")), 2).alias("pct_public"),
-                F.round((F.sum("secteur_prive") * 100.0 / F.count("*")), 2).alias("pct_prive")
-            ) \
+                F.round((F.sum("secteur_public") * 100.0 / F.count("*")), 2).alias(
+                    "pct_public"
+                ),
+                F.round((F.sum("secteur_prive") * 100.0 / F.count("*")), 2).alias(
+                    "pct_prive"
+                ),
+            )
             .orderBy("annee_fermeture", "code_departement")
+        )
 
         logger.info("✅ Calcul terminé. Aperçu des statistiques :")
         df_grouped.show(10, truncate=False)
@@ -972,8 +1019,51 @@ class DataTransformer:
 
 
 
+    def transform_security_data(self, df):
+        """
+        Transforme les données de sécurité :
+        - Sélectionne les colonnes commençant par '_' (années)
+        - Convertit le format large en format long
+        - Calcule le total des délits par département et année
 
+        :param df: DataFrame brut des données de sécurité
+        :return: DataFrame transformé avec colonnes (Département, Année, Délits_total)
+        """
+        if df is None:
+            logger.error("❌ DataFrame de sécurité invalide")
+            return None
 
+        logger.info("🚀 Transformation des données de sécurité...")
 
+        try:
+            # Sélectionner uniquement les colonnes d'années (commençant par '_')
+            year_cols = [col for col in df.columns if col.startswith("_")]
 
+            # Créer l'expression pour le stack
+            stack_expr = []
+            for col in year_cols:
+                year = col.split("_")[1]
+                stack_expr.extend([f"'{year}'", col])
 
+            # Conversion format large vers long
+            df_long = df.select(
+                "departement",
+                expr(
+                    f"stack({len(year_cols)}, {','.join(stack_expr)}) as (annee, valeur)"
+                ),
+            )
+
+            # Aggrégation par département et année
+            df_final = (
+                df_long.groupBy("departement", "annee")
+                .agg(round(sum("valeur"), 0).alias("delits_total"))
+                .filter((col("annee") >= 1996) & (col("annee") <= 2022))
+                .orderBy("departement", "annee")
+            )
+
+            logger.info("✅ Transformation des données de sécurité réussie")
+            return df_final
+
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la transformation : {str(e)}")
+            return None

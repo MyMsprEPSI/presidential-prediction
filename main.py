@@ -65,6 +65,9 @@ def main():
     life_expectancy_file = "./data/sante/valeurs_annuelles.csv"
     departments_file_path = "./data/departements-france.csv"
 
+    # Dans la section des chemins de fichiers
+    security_excel_file = "./data/securite/tableaux-4001-ts.xlsx"
+
     # ----------------------------------------------------------------
     # 2) Initialisation des objets ETL
     # ----------------------------------------------------------------
@@ -160,13 +163,18 @@ def main():
     # ----------------------------------------------------------------
     # 3.8) EXTRACT : Charger les données de sécurité
     # ----------------------------------------------------------------
-
+    df_security = extractor.extract_security_data(security_excel_file)
+    if df_security is None:
+        logger.error("❌ Échec de l'extraction des données de sécurité")
+        return
 
     # ----------------------------------------------------------------
     # 3.9) EXTRACT : Charger les données de santé
     # ----------------------------------------------------------------
 
-    df_life_expectancy_raw = extractor.extract_life_expectancy_data(life_expectancy_file)
+    df_life_expectancy_raw = extractor.extract_life_expectancy_data(
+        life_expectancy_file
+    )
 
     if df_life_expectancy_raw is None:
         logger.error("❌ Échec de l'extraction des données. Arrêt du programme.")
@@ -182,8 +190,6 @@ def main():
         return
     logger.info("✅ Extraction des données des départements réussie.")
     df_departments.show(5, truncate=False)
-
-
 
     # ----------------------------------------------------------------
     # 4) TRANSFORM : Nettoyage et sélection des données : environnementales
@@ -329,7 +335,9 @@ def main():
     df_edu_clean.show(5, truncate=False)
 
     # 4.7.1) Calcul des statistiques par année et département
-    df_edu_grouped = transformer.calculate_closed_by_year_and_dept_education(df_edu_clean)
+    df_edu_grouped = transformer.calculate_closed_by_year_and_dept_education(
+        df_edu_clean
+    )
     if df_edu_grouped is None:
         logger.error("❌ Échec du calcul des statistiques d'éducation")
         return
@@ -337,16 +345,21 @@ def main():
     df_edu_grouped.show(10, truncate=False)
 
     # ----------------------------------------------------------------
-    # 4.8) TRANSFORMATION : nettoyage et sélection des données de sécurité
+    # 4.8) TRANSFORMATION : Transformation des données de sécurité
     # ----------------------------------------------------------------
-
+    df_security_transformed = transformer.transform_security_data(df_security)
+    if df_security_transformed is None:
+        logger.error("❌ Échec de la transformation des données de sécurité")
+        return
 
     # ----------------------------------------------------------------
     # 4.9) TRANSFORM : nettoyage et sélection des données de santé
     # ----------------------------------------------------------------
 
     # Transformation des données d'espérance de vie en incluant la jointure avec les départements
-    df_life_final = transformer.transform_life_expectancy_data(df_life_expectancy_raw, df_departments)
+    df_life_final = transformer.transform_life_expectancy_data(
+        df_life_expectancy_raw, df_departments
+    )
     if df_life_final is None:
         logger.error("❌ Échec de la transformation des données d'espérance de vie.")
         return
@@ -354,7 +367,6 @@ def main():
     df_life_final.show(10, truncate=False)
 
     df_life_final = transformer.fill_missing_mayotte_life_expectancy(df_life_final)
-
 
     # ----------------------------------------------------------------
     # 5) LOAD : Sauvegarde en fichier CSV
@@ -377,11 +389,9 @@ def main():
     output_path_life = "esperance_de_vie_par_departement_2000_2022.csv"
     loader.save_to_csv(df_life_final, output_path_life)
 
-    # ----------------------------------------------------------------
-    # 5.6) LOAD : Sauvegarde des données démographiques
-    # ----------------------------------------------------------------
-    loader.save_to_csv(df_totaux, "./data/demographie/population_totaux.csv")
-    loader.save_to_csv(df_departements, "./data/demographie/population_par_departement.csv")
+    # Dans la section LOAD
+    output_path_security = "delits_par_departement_1996_2022.csv"
+    loader.save_to_csv(df_security_transformed, output_path_security)
 
     # ----------------------------------------------------------------
     # 6) Arrêt de la session Spark
