@@ -901,38 +901,106 @@ class DataTransformer:
         """
         Calcule le nombre d'établissements fermés par année et par département à partir des données d'éducation.
         Regroupe par 'annee_fermeture', 'code_departement' et 'libelle_departement', puis agrège :
-          - Le nombre total d'établissements (count sur "numero_uai"),
-          - Le nombre d'établissements fermés dans le secteur public (sum de "secteur_public"),
-          - Le nombre dans le secteur privé (sum de "secteur_prive"),
-          - Les pourcentages correspondants (arrondis à 2 décimales).
-        :param df: DataFrame nettoyé d'éducation, incluant les colonnes "annee_fermeture", "code_departement",
-                   "libelle_departement", "numero_uai", "secteur_public" et "secteur_prive".
-        :return: DataFrame avec les statistiques par année et département.
+        - Le nombre total d'établissements (count sur "numero_uai"),
+        - Le nombre d'établissements fermés dans le secteur public (sum de "secteur_public"),
+        - Le nombre dans le secteur privé (sum de "secteur_prive"),
+        - Les pourcentages correspondants (arrondis à 2 décimales).
+        
+        Ensuite, pour chaque département présent, les combinaisons manquantes pour les années cibles
+        (2002, 2007, 2012, 2017, 2022) sont complétées avec des valeurs par défaut (0).
+
+        :param df: DataFrame nettoyé d'éducation, incluant les colonnes "annee_fermeture",
+                "code_departement", "libelle_departement", "numero_uai", "secteur_public" et "secteur_prive".
+        :return: DataFrame avec les statistiques par année et département complétées.
         """
+        import pyspark.sql.functions as F
+        from pyspark.sql.functions import col, lit, when
 
-        logger.info(
-            "🚀 Calcul des statistiques de fermetures d'établissements par département et année..."
-        )
+        logger.info("🚀 Calcul des statistiques de fermetures d'établissements par département et année...")
 
+        # Agrégation initiale - éviter le regroupement par libelle_departement pour réduire la mémoire
         df_grouped = (
-            df.groupBy("annee_fermeture", "code_departement", "libelle_departement")
+            df.groupBy("annee_fermeture", "code_departement")
             .agg(
+                F.first("libelle_departement").alias("libelle_departement"),
                 F.count("numero_uai").alias("nombre_total_etablissements"),
                 F.sum("secteur_public").alias("nb_public"),
-                F.sum("secteur_prive").alias("nb_prive"),
-                F.round((F.sum("secteur_public") * 100.0 / F.count("*")), 2).alias(
-                    "pct_public"
-                ),
-                F.round((F.sum("secteur_prive") * 100.0 / F.count("*")), 2).alias(
-                    "pct_prive"
-                ),
+                F.sum("secteur_prive").alias("nb_prive")
             )
-            .orderBy("annee_fermeture", "code_departement")
+        )
+        
+        # Calculer les pourcentages avec une expression sécurisée pour éviter division par zéro
+        df_grouped = df_grouped.withColumn(
+            "pct_public", 
+            F.round(F.when(F.col("nombre_total_etablissements") > 0,
+                           F.col("nb_public") * 100.0 / F.col("nombre_total_etablissements"))
+                    .otherwise(0.0), 2)
+        ).withColumn(
+            "pct_prive", 
+            F.round(F.when(F.col("nombre_total_etablissements") > 0,
+                           F.col("nb_prive") * 100.0 / F.col("nombre_total_etablissements"))
+                    .otherwise(0.0), 2)
         )
 
-        return self._extracted_from_combine_election_and_orientation_politique_52(
-            "✅ Calcul terminé. Aperçu des statistiques :", df_grouped, 10
-        )
+        # Liste des années cibles pour lesquelles on souhaite forcer une présence
+        target_years = [2002, 2007, 2012, 2017, 2022]
+
+        # Récupérer uniquement les départements uniques pour éviter de multiplier les données
+        df_depts = df.select("code_departement", "libelle_departement").distinct().cache()
+        
+        # Créer des données pour les années manquantes pour chaque département
+        result_dfs = []
+        
+        for year in target_years:
+            # Pour chaque année cible, créer un DataFrame avec cette année et tous les départements
+            df_year = df_depts.withColumn("annee_fermeture", lit(year))
+            
+            # Jointure gauche avec les données existantes
+            df_year_completed = df_year.join(
+                df_grouped.filter(F.col("annee_fermeture") == year),
+                on=["code_departement", "annee_fermeture", "libelle_departement"],
+                how="left"
+            )
+            
+            # Remplir les valeurs manquantes
+            df_year_completed = df_year_completed.na.fill({
+                "nombre_total_etablissements": 0,
+                "nb_public": 0,
+                "nb_prive": 0,
+                "pct_public": 0.0,
+                "pct_prive": 0.0
+            })
+            
+            result_dfs.append(df_year_completed)
+        
+        # Union de tous les résultats par année avec les données originales filtrées sur les années non-cibles
+        df_other_years = df_grouped.filter(~F.col("annee_fermeture").isin(target_years))
+        result_dfs.append(df_other_years)
+        
+        # Effectuer l'union de tous les DataFrames
+        df_completed = result_dfs[0]
+        for i in range(1, len(result_dfs)):
+            df_completed = df_completed.unionByName(result_dfs[i], allowMissingColumns=True)
+            
+        # Nettoyer les valeurs nulles qui pourraient rester dans les colonnes numériques
+        df_completed = df_completed.na.fill({
+            "nombre_total_etablissements": 0,
+            "nb_public": 0,
+            "nb_prive": 0,
+            "pct_public": 0.0,
+            "pct_prive": 0.0
+        })
+
+        # Tri final par année et département
+        df_completed = df_completed.orderBy("annee_fermeture", "code_departement")
+        
+        # Libérer la mémoire du cache
+        df_depts.unpersist()
+
+        logger.info("✅ Calcul des statistiques complété. Aperçu :")
+        df_completed.show(10, truncate=False)
+        return df_completed
+
 
     def transform_security_data(self, df):
         """
