@@ -76,17 +76,9 @@ class DataLoader:
                         "❌ Aucun fichier CSV généré dans le dossier temporaire."
                     )
             else:  # C'est un DataFrame pandas
-                # Déterminer si c'est le fichier de sécurité pour utiliser le format spécifique
-                if input_file_path.endswith("delits_par_departement_1996_2022.csv"):
-                    # Format spécifique pour les données de sécurité
-                    df.to_csv(final_output_path, sep=";", index=False, header=False)
-                    logger.info(
-                        "✅ Fichier CSV sauvegardé avec succès (format spécial sécurité)!"
-                    )
-                else:
-                    # Format standard pour les autres données
-                    df.to_csv(final_output_path, sep=";", index=False)
-                    logger.info("✅ Fichier CSV sauvegardé avec succès via pandas!")
+                # Pour le fichier de sécurité, on utilise toujours le header
+                df.to_csv(final_output_path, sep=";", index=False, header=True)
+                logger.info("✅ Fichier CSV sauvegardé avec succès via pandas!")
 
         except Exception as e:
             logger.error(f"❌ Erreur lors de l'enregistrement du fichier : {str(e)}")
