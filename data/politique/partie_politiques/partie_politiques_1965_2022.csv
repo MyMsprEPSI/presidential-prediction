@@ -1,19 +1,19 @@
-Nom du parti,Orientation politique
-SFIO,gauche
-PS,centre gauche
-PCF,gauche
-FI,extreme gauche
-LFI,gauche
-NPA,extreme gauche
-LO,extreme gauche
-PRG,centre gauche
-UDF,centre
-MoDem,centre
-LREM,centre
-PR,centre
-RPR,centre droite
-UMP,centre droite
-LR,centre droite
-DLF,droite
-FN,extreme droite
-RN,extreme droite
+id, Nom du parti,Orientation politique
+2,SFIO,gauche
+3,PS,centre gauche
+2,PCF,gauche
+1,FI,extreme gauche
+2,LFI,gauche
+1,NPA,extreme gauche
+1,LO,extreme gauche
+3,PRG,centre gauche
+4,UDF,centre
+4,MoDem,centre
+4,LREM,centre
+4,PR,centre
+5,RPR,centre droite
+5,UMP,centre droite
+5,LR,centre droite
+6,DLF,droite
+7,FN,extreme droite
+7,RN,extreme droite

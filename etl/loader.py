@@ -35,9 +35,7 @@ class DataLoader:
     def save_to_csv(self, df, input_file_path):
         """
         Sauvegarde un DataFrame en fichier CSV après transformation.
-
-        :param df: DataFrame PySpark transformé
-        :param input_file_path: Chemin du fichier source initial
+        Utilise une approche plus robuste pour gérer les grands datasets.
         """
         if df is None:
             logger.error("❌ Impossible de sauvegarder un DataFrame vide.")
@@ -45,43 +43,38 @@ class DataLoader:
 
         # Normaliser le chemin d'entrée
         input_file_path = os.path.normpath(input_file_path)
-
-        # Créer le nom du fichier de sortie
         base_name = os.path.basename(input_file_path).replace(".csv", "_processed.csv")
         final_output_path = os.path.normpath(os.path.join(self.output_dir, base_name))
-        temp_output_path = os.path.normpath(
-            os.path.join(self.output_dir, f"{base_name}_temp")
-        )
 
         logger.info(
             f"⚡ Enregistrement des données transformées dans : {final_output_path}"
         )
 
         try:
-            # Utiliser toPandas() pour les petits datasets ou repartition() pour les grands
-            if df.count() < 1000000:  # Seuil arbitraire, à ajuster selon vos besoins
-                # Méthode pour petits datasets
-                df.toPandas().to_csv(final_output_path, index=False)
+            # Forcer la matérialisation du DataFrame avant la sauvegarde
+            df = df.coalesce(1)  # Réduire à une seule partition
+
+            # Sauvegarder en mode overwrite
+            df.write.mode("overwrite").option("header", "true").option(
+                "delimiter", ";"
+            ).csv(final_output_path + "_temp")
+
+            temp_file = next(
+                (
+                    os.path.join(final_output_path + "_temp", filename)
+                    for filename in os.listdir(final_output_path + "_temp")
+                    if filename.endswith(".csv")
+                ),
+                None,
+            )
+            if temp_file:
+                shutil.copy2(temp_file, final_output_path)
+                shutil.rmtree(final_output_path + "_temp")
+                logger.info("✅ Fichier CSV sauvegardé avec succès !")
             else:
-                # Méthode pour grands datasets
-                df.repartition(1).write.mode("overwrite").option("header", "true").csv(
-                    temp_output_path
-                )
+                logger.error("❌ Aucun fichier CSV généré dans le dossier temporaire.")
 
-                # Renommer le fichier généré
-                for filename in os.listdir(temp_output_path):
-                    if filename.endswith(".csv"):
-                        os.rename(
-                            os.path.join(temp_output_path, filename), final_output_path
-                        )
-
-                # Nettoyer le dossier temporaire
-                if os.path.exists(temp_output_path):
-                    shutil.rmtree(temp_output_path)
-
-            logger.info("✅ Fichier CSV sauvegardé avec succès !")
         except Exception as e:
             logger.error(f"❌ Erreur lors de l'enregistrement du fichier : {str(e)}")
-            # Nettoyer le dossier temporaire en cas d'erreur
-            if os.path.exists(temp_output_path):
-                shutil.rmtree(temp_output_path)
+            if os.path.exists(final_output_path + "_temp"):
+                shutil.rmtree(final_output_path + "_temp")
