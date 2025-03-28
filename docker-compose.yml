@@ -9,7 +9,7 @@ services:
         restart: unless-stopped
         volumes:
             - bigdata-project-mysql-data:/var/lib/mysql
-            - ./database/init/init.sql:/docker-entrypoint-initdb.d/init.sql
+            - ./database/seed-bigdata.sql:/docker-entrypoint-initdb.d/init.sql
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
         ports:
