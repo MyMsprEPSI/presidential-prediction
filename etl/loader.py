@@ -35,7 +35,7 @@ class DataLoader:
     def save_to_csv(self, df, input_file_path):
         """
         Sauvegarde un DataFrame en fichier CSV après transformation.
-        Utilise une approche plus robuste pour gérer les grands datasets.
+        Compatible avec les DataFrames pandas et Spark.
         """
         if df is None:
             logger.error("❌ Impossible de sauvegarder un DataFrame vide.")
@@ -51,28 +51,42 @@ class DataLoader:
         )
 
         try:
-            # Forcer la matérialisation du DataFrame avant la sauvegarde
-            df = df.coalesce(1)  # Réduire à une seule partition
+            # Vérifier si c'est un DataFrame pandas ou Spark
+            if hasattr(df, "toPandas"):  # C'est un DataFrame Spark
+                # Utiliser la méthode originale pour Spark
+                df = df.coalesce(1)
+                df.write.mode("overwrite").option("header", "true").option(
+                    "delimiter", ";"  # Utiliser la virgule comme séparateur
+                ).csv(final_output_path + "_temp")
 
-            # Sauvegarder en mode overwrite
-            df.write.mode("overwrite").option("header", "true").option(
-                "delimiter", ";"
-            ).csv(final_output_path + "_temp")
-
-            temp_file = next(
-                (
-                    os.path.join(final_output_path + "_temp", filename)
-                    for filename in os.listdir(final_output_path + "_temp")
-                    if filename.endswith(".csv")
-                ),
-                None,
-            )
-            if temp_file:
-                shutil.copy2(temp_file, final_output_path)
-                shutil.rmtree(final_output_path + "_temp")
-                logger.info("✅ Fichier CSV sauvegardé avec succès !")
-            else:
-                logger.error("❌ Aucun fichier CSV généré dans le dossier temporaire.")
+                temp_file = next(
+                    (
+                        os.path.join(final_output_path + "_temp", filename)
+                        for filename in os.listdir(final_output_path + "_temp")
+                        if filename.endswith(".csv")
+                    ),
+                    None,
+                )
+                if temp_file:
+                    shutil.copy2(temp_file, final_output_path)
+                    shutil.rmtree(final_output_path + "_temp")
+                    logger.info("✅ Fichier CSV sauvegardé avec succès !")
+                else:
+                    logger.error(
+                        "❌ Aucun fichier CSV généré dans le dossier temporaire."
+                    )
+            else:  # C'est un DataFrame pandas
+                # Déterminer si c'est le fichier de sécurité pour utiliser le format spécifique
+                if input_file_path.endswith("delits_par_departement_1996_2022.csv"):
+                    # Format spécifique pour les données de sécurité
+                    df.to_csv(final_output_path, sep=";", index=False, header=False)
+                    logger.info(
+                        "✅ Fichier CSV sauvegardé avec succès (format spécial sécurité)!"
+                    )
+                else:
+                    # Format standard pour les autres données
+                    df.to_csv(final_output_path, sep=";", index=False)
+                    logger.info("✅ Fichier CSV sauvegardé avec succès via pandas!")
 
         except Exception as e:
             logger.error(f"❌ Erreur lors de l'enregistrement du fichier : {str(e)}")

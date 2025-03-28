@@ -59,8 +59,10 @@ def main():
         "./data/politique/taux-votes/2017/Presidentielle_2017_Resultats_Tour_2_c.xls"
     )
     election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
-    orientation_politique_file = "./data/politique/partie_politiques/partie_politiques_1965_2022.csv"
-   
+    orientation_politique_file = (
+        "./data/politique/partie_politiques/partie_politiques_1965_2022.csv"
+    )
+
     education_file = "./data/education/fr-en-etablissements-fermes.csv"
     life_expectancy_file = "./data/sante/valeurs_annuelles.csv"
     departments_file_path = "./data/politique/departements-france.csv"
@@ -172,6 +174,9 @@ def main():
     if df_security is None:
         logger.error("❌ Échec de l'extraction des données de sécurité")
         return
+    logger.info(
+        f"✅ Extraction des données de sécurité réussie: {len(df_security)} lignes"
+    )
 
     # ----------------------------------------------------------------
     # 3.9) EXTRACT : Charger les données de santé
@@ -205,7 +210,7 @@ def main():
         return
     logger.info("✅ Extraction des données d'orientation politique réussie.")
     df_orientation_politique.show(5, truncate=False)
-    
+
     # ----------------------------------------------------------------
     # 4) TRANSFORM : Nettoyage et sélection des données : environnementales
     # ----------------------------------------------------------------
@@ -335,8 +340,6 @@ def main():
     logger.info("✅ Transformation des données de démographie réussie")
     df_demographie_transformed.show(5, truncate=False)
 
-
-    
     # ----------------------------------------------------------------
     # 4.7) TRANSFORMATION : nettoyage et sélection des données d'éducation
     # ----------------------------------------------------------------
@@ -362,6 +365,9 @@ def main():
     if df_security_transformed is None:
         logger.error("❌ Échec de la transformation des données de sécurité")
         return
+    logger.info(
+        f"✅ Transformation des données de sécurité réussie: {len(df_security_transformed)} lignes"
+    )
 
     # ----------------------------------------------------------------
     # 4.9) TRANSFORM : nettoyage et sélection des données de santé
@@ -403,7 +409,7 @@ def main():
     # Dans la section LOAD
     output_path_security = "delits_par_departement_1996_2022.csv"
     loader.save_to_csv(df_security_transformed, output_path_security)
-
+    logger.info(f"✅ Sauvegarde des données de sécurité réussie")
 
     output_path_demographie = "demographie_final.csv"
     loader.save_to_csv(df_demographie_transformed, demo_csv)
