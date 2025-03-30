@@ -53,17 +53,7 @@ def extract_and_merge_excel(file_xlsx, file_csv):
     if not os.path.exists(file_csv):
         print("📥 Extraction et fusion des feuilles Excel...")
         try:
-            # Charger le classeur XLSX
-            xls = pd.ExcelFile(file_xlsx)
-            # On ignore la première feuille (ex: "À savoir")
-            sheets_to_read = xls.sheet_names[1:]
-            dfs = []
-            for sheet in sheets_to_read:
-                print(f"📄 Traitement de la feuille : {sheet}")
-                df = pd.read_excel(xls, sheet_name=sheet, skiprows=3)
-                df["Année"] = sheet  # Ajouter l'année issue du nom de la feuille
-                dfs.append(df)
-            df_final = pd.concat(dfs, ignore_index=True)
+            df_final = _process_excel_sheets(file_xlsx)
             # Sauvegarder en CSV avec le séparateur point-virgule
             df_final.to_csv(file_csv, index=False, sep=";")
             print(f"✅ Fichier CSV généré : {file_csv}")
@@ -71,6 +61,24 @@ def extract_and_merge_excel(file_xlsx, file_csv):
             print(f"❌ Erreur lors de l'extraction/fusion : {e}")
     else:
         print(f"✓ {file_csv} existe déjà. Extraction ignorée.")
+    
+    
+def _process_excel_sheets(file_xlsx):
+    """
+    Traite les feuilles Excel en ignorant la première feuille (ex: "À savoir").
+    Retourne un DataFrame combiné avec une colonne Année ajoutée.
+    """
+    # Charger le classeur XLSX
+    xls = pd.ExcelFile(file_xlsx)
+    # On ignore la première feuille (ex: "À savoir")
+    sheets_to_read = xls.sheet_names[1:]
+    dfs = []
+    for sheet in sheets_to_read:
+        print(f"📄 Traitement de la feuille : {sheet}")
+        df = pd.read_excel(xls, sheet_name=sheet, skiprows=3)
+        df["Année"] = sheet  # Ajouter l'année issue du nom de la feuille
+        dfs.append(df)
+    return pd.concat(dfs, ignore_index=True)
 
 
 class DataExtractor:
@@ -251,8 +259,7 @@ class DataExtractor:
 
         try:
             df_raw = self._load_pib_2022_data(csv_path)
-            df_final = self._select_and_rename_pib_2022_columns(df_raw)
-            return df_final
+            return self._select_and_rename_pib_2022_columns(df_raw)
         except Exception as e:
             logger.error(f"❌ Erreur extraction PIB 2022: {str(e)}")
             return None
@@ -631,16 +638,7 @@ class DataExtractor:
         if not os.path.exists(file_csv):
             print("📥 Extraction et fusion des feuilles Excel...")
             try:
-                xls = pd.ExcelFile(file_xlsx)
-                # Ignorer la première feuille (ex: "À savoir")
-                sheets_to_read = xls.sheet_names[1:]
-                dfs = []
-                for sheet in sheets_to_read:
-                    print(f"📄 Traitement de la feuille : {sheet}")
-                    df = pd.read_excel(xls, sheet_name=sheet, skiprows=3)
-                    df["Année"] = sheet  # Ajouter l'année issue du nom de la feuille
-                    dfs.append(df)
-                df_final = pd.concat(dfs, ignore_index=True)
+                df_final = self._extract_and_combine_demo_sheets(file_xlsx)
                 # Sauvegarder en CSV avec le séparateur point-virgule
                 df_final.to_csv(file_csv, index=False, sep=";")
                 print(f"✅ Fichier CSV généré : {file_csv}")
@@ -659,9 +657,8 @@ class DataExtractor:
         if not os.path.exists(file_path):
             logger.error(f"❌ Fichier non trouvé : {file_path}")
             return None
-        logger.info(
-            f"📥 Extraction des données d'orientation politique depuis : {file_path}"
-        )
+            
+        logger.info(f"📥 Extraction des données d'orientation politique depuis : {file_path}")
         return self.spark.read.option("header", True).csv(file_path)
 
     def stop(self):

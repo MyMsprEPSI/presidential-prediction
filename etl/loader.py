@@ -60,15 +60,14 @@ class DataLoader:
                     "delimiter", ";"  # Utiliser la virgule comme séparateur
                 ).csv(final_output_path + "_temp")
 
-                temp_file = next(
+                if temp_file := next(
                     (
                         os.path.join(final_output_path + "_temp", filename)
                         for filename in os.listdir(final_output_path + "_temp")
                         if filename.endswith(".csv")
                     ),
                     None,
-                )
-                if temp_file:
+                ):
                     shutil.copy2(temp_file, final_output_path)
                     shutil.rmtree(final_output_path + "_temp")
                     logger.info("✅ Fichier CSV sauvegardé avec succès !")
@@ -219,10 +218,3 @@ class DataLoader:
         df_final.show(10, truncate=False)
 
         self.save_to_csv(df_final, output_filename)
-
-
-
-
-
-
-
