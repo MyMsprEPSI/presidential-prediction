@@ -112,9 +112,84 @@ class DataLoader:
         logger.info("✨ Chargement des données dans la table dim_politique terminé")
     
     def load_dim_securite(self, df_dim_securite, mode="append"):
-        """Charge les données de la dimension sécurité dans MySQL"""
-        self._load(df_dim_securite, "dim_securite", mode)
-        logger.info("✨ Chargement des données dans la table dim_securite terminé")
+        """
+        Charge les données de sécurité dans la table dim_securite en utilisant une approche directe
+        avec MySQL Connector au lieu de JDBC.
+        
+        Args:
+            df_dim_securite: DataFrame Spark ou structure de données contenant le schéma et les données
+            mode: Mode d'insertion (append, overwrite)
+        """
+        if df_dim_securite is None:
+            logger.error("❌ Les données de sécurité sont None")
+            return False
+        
+        try:
+            # Pour tous les types de données en entrée
+            conn = mysql.connector.connect(
+                host=self._get_host_from_jdbc(),
+                user=self.user,
+                password=self.password,
+                database=self.database
+            )
+            cursor = conn.cursor()
+            
+            # Si c'est un DataFrame Spark, le convertir en liste Python
+            if hasattr(df_dim_securite, "collect"):
+                logger.info("🔄 Conversion du DataFrame Spark en liste de tuples pour insertion directe")
+                # Récupérer toutes les données sous forme de liste de tuples
+                rows = df_dim_securite.select("annee", "code_dept", "delits_total").collect()
+                data_rows = [(row["annee"], row["code_dept"], row["delits_total"]) for row in rows]
+                
+            # Si c'est un dictionnaire (format retourné par prepare_dim_securite)
+            elif isinstance(df_dim_securite, dict) and 'data' in df_dim_securite:
+                logger.info("🔄 Utilisation du format de données simplifié")
+                data_rows = df_dim_securite['data']
+                
+            else:
+                logger.error("❌ Format de données non pris en charge")
+                return False
+            
+            # Si mode est "overwrite", vider d'abord la table
+            if mode == "overwrite":
+                self._execute_sql(cursor, "SET FOREIGN_KEY_CHECKS=0;", conn, "Foreign key checks disabled.")
+                self._execute_sql(cursor, f"TRUNCATE TABLE dim_securite;", conn, f"Table dim_securite vidée.")
+                self._execute_sql(cursor, "SET FOREIGN_KEY_CHECKS=1;", conn, "Foreign key checks enabled.")
+            
+            # Insertion de données par lots de 1000
+            batch_size = 1000
+            for i in range(0, len(data_rows), batch_size):
+                batch = data_rows[i:i + batch_size]
+                
+                # Création des placeholders dynamiques basés sur la taille du batch
+                placeholder = ', '.join(['(%s, %s, %s)'] * len(batch))
+                
+                # Transformation des tuples en liste plate pour l'exécution
+                flat_values = [item for sublist in batch for item in sublist]
+                
+                # Requête d'insertion SQL
+                sql = f"INSERT INTO dim_securite (annee, code_dept, delits_total) VALUES {placeholder}"
+                cursor.execute(sql, flat_values)
+            
+            # Validation de la transaction
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            logger.info(f"✅ {len(data_rows)} lignes insérées dans dim_securite")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du chargement des données dans dim_securite: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            try:
+                if conn:
+                    conn.rollback()  # Annuler la transaction en cas d'erreur
+                    conn.close()
+            except:
+                pass
+            return False
     
     def load_dim_sante(self, df_dim_sante, mode="append"):
         """Charge les données de la dimension santé dans MySQL"""

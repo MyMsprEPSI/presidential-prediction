@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataTransformer:
+    
     """
     Classe permettant de transformer les données extraites avant leur chargement.
     """
@@ -1426,79 +1427,69 @@ class DataTransformer:
             logger.error(traceback.format_exc())
             return None
             
+
+
+
     def prepare_dim_securite(self, df_securite):
         """
-        Prépare les données pour la dimension sécurité.
-        
-        Args:
-            df_securite: DataFrame des données de sécurité (pandas)
-        
-        Returns:
-            DataFrame formaté pour dim_securite
+        Prépare les données pour la dimension sécurité sans créer de nouvelle session Spark.
         """
+        import pandas as pd
+        from pyspark.sql import SparkSession
+        from pyspark.sql.types import IntegerType, StringType, StructType, StructField
+        
         logger.info("🔄 Préparation des données pour dim_securite")
         
         try:
-            # Vérifier si le DataFrame est de type pandas et le convertir en DataFrame Spark
-            if isinstance(df_securite, pd.DataFrame):
-                logger.info("🔄 Conversion du DataFrame pandas en DataFrame Spark")
-                # Prétraiter côté pandas pour éviter problèmes de conversion
-                df_securite = df_securite.rename(columns={
-                    'Année': 'annee',
-                    'Département': 'code_dept',
-                    'Délits_total': 'delits_total'
-                })
+            if df_securite is None:
+                logger.error("❌ Les données de sécurité sont None")
+                return None
                 
-                # Sélection des colonnes nécessaires uniquement
-                df_securite = df_securite[['annee', 'code_dept', 'delits_total']]
-                
-                # Conversion en types appropriés avant passage à Spark
-                df_securite['annee'] = df_securite['annee'].astype(int)
-                df_securite['delits_total'] = df_securite['delits_total'].astype(int)
-                df_securite['code_dept'] = df_securite['code_dept'].astype(str)
-                
-                # S'assurer que code_dept ne dépasse pas 3 caractères
-                df_securite['code_dept'] = df_securite['code_dept'].apply(
-                    lambda x: x[:3] if len(x) > 3 else x
-                )
-                
-                # Création du schéma Spark explicite
-                schema = StructType([
-                    StructField("annee", IntegerType(), False),
-                    StructField("code_dept", StringType(), False),
-                    StructField("delits_total", IntegerType(), False)
-                ])
-                
-                # Conversion en DataFrame Spark
-                spark = SparkSession.builder.getOrCreate()
-                dim_securite = spark.createDataFrame(df_securite, schema=schema)
-            else:
-                # Si c'est déjà un DataFrame Spark
-                dim_securite = df_securite.select(
-                    col("annee").cast(IntegerType()).alias("annee"),
-                    col("code_dept").alias("code_dept"),
-                    col("delits_total").cast(IntegerType()).alias("delits_total")
-                )
-                
-            # Vérifier que code_dept est limité à 3 caractères
-            dim_securite = dim_securite.withColumn(
-                "code_dept",
-                F.when(F.length("code_dept") > 3, F.substring("code_dept", 1, 3))
-                .otherwise(F.col("code_dept"))
-            )
+            # Si le DataFrame est déjà un DataFrame Spark
+            if not isinstance(df_securite, pd.DataFrame):
+                logger.info("DataFrame Spark utilisé directement")
+                return df_securite
             
-            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            logger.info("🔄 Conversion du DataFrame pandas en structure de données MySQL")
             
-            # Afficher un échantillon des données (éviter show() qui a causé un crash)
-            logger.info(f"✅ Dimension sécurité préparée avec succès")
+            # Normalisation des noms de colonnes
+            if not {'Année', 'Département', 'Délits_total'}.issubset(set(df_securite.columns)):
+                if len(df_securite.columns) == 3:
+                    df_securite.columns = ['Année', 'Département', 'Délits_total']
+                else:
+                    logger.error(f"❌ Structure de colonnes inattendue: {df_securite.columns}")
+                    return None
             
-            return dim_securite
+            # Création d'une liste de dictionnaires pour l'insertion directe en SQL
+            data = {
+                "schema": ["annee", "code_dept", "delits_total"],
+                "data": []
+            }
+            
+            # Traitement ligne par ligne
+            for _, row in df_securite.iterrows():
+                try:
+                    annee = int(row['Année'])
+                    code_dept = str(row['Département']).strip()[:3]
+                    delits_total = int(row['Délits_total'])
+                    data["data"].append((annee, code_dept, delits_total))
+                except Exception as e:
+                    logger.warning(f"⚠️ Ligne ignorée à cause d'une erreur: {e}")
+            
+            logger.info(f"✅ {len(data['data'])} lignes préparées pour l'insertion")
+            
+            # Utilisation d'un chargement direct en base de données au lieu de passer par Spark
+            # Cette approche est plus efficace pour les insertions MySQL
+            return data
             
         except Exception as e:
             logger.error(f"❌ Erreur lors de la préparation des données de sécurité: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
             return None
+
+
+
 
     def prepare_dim_sante(self, df_life):
         """
@@ -1842,16 +1833,41 @@ class DataTransformer:
             # Jointure avec dimension sécurité
             if dim_securite is not None:
                 logger.info("🔄 Jointure avec dimension sécurité")
-                fact_table = fact_table.join(
-                    dim_securite.select(
+                try:
+                    # Vérification préalable des colonnes
+                    spark = SparkSession.builder.getOrCreate()
+                    dim_securite_columns = dim_securite.columns
+                    logger.info(f"Colonnes disponibles dans dim_securite: {dim_securite_columns}")
+                    
+                    # Création d'une colonne ID temporaire pour éviter les confusions
+                    tmp_securite = dim_securite.select(
                         F.monotonically_increasing_id().alias("securite_id"), 
-                        col("annee").alias("sec_annee"), 
-                        col("code_dept").alias("sec_code_dept")
-                    ),
-                    (fact_table.annee == F.col("sec_annee")) & 
-                    (fact_table.code_dept == F.col("sec_code_dept")),
-                    "left"
-                ).drop("sec_annee", "sec_code_dept")
+                        F.col("annee").cast("int").alias("sec_annee"), 
+                        F.col("code_dept").cast("string").alias("sec_code_dept")
+                    )
+                    
+                    # Éviter les jointures complexes, faire plutôt une jointure sur une clé concaténée
+                    fact_table = fact_table.withColumn("join_key", 
+                                                    F.concat(F.col("annee").cast("string"), 
+                                                            F.lit("_"), 
+                                                            F.col("code_dept")))
+                    
+                    tmp_securite = tmp_securite.withColumn("join_key", 
+                                                        F.concat(F.col("sec_annee").cast("string"), 
+                                                                F.lit("_"), 
+                                                                F.col("sec_code_dept")))
+                    
+                    # Jointure simplifiée
+                    fact_table = fact_table.join(
+                        tmp_securite,
+                        fact_table["join_key"] == tmp_securite["join_key"],
+                        "left"
+                    ).drop(tmp_securite["join_key"]).drop("sec_annee", "sec_code_dept")
+                    
+                except Exception as e:
+                    logger.error(f"⚠️ Erreur lors de la jointure avec sécurité: {str(e)}")
+                    logger.error(traceback.format_exc())
+                    fact_table = fact_table.withColumn("securite_id", F.lit(None).cast(IntegerType()))
             else:
                 fact_table = fact_table.withColumn("securite_id", F.lit(None).cast(IntegerType()))
                 
