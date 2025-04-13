@@ -1,6 +1,7 @@
 # transform.py
 
 import logging
+import pandas as pd
 from pyspark.sql.functions import (
     col,
     when,
@@ -14,9 +15,9 @@ from pyspark.sql.functions import (
     upper,
     create_map,
 )
-from pyspark.sql.types import IntegerType, DoubleType, DateType
+from pyspark.sql.types import IntegerType, DoubleType, DateType, StringType, StructType, StructField
 from pyspark.sql.window import Window
-from pyspark.sql import functions as F, types as T
+from pyspark.sql import functions as F, types as T, SparkSession
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.feature import VectorAssembler
 from itertools import chain
@@ -1364,6 +1365,613 @@ class DataTransformer:
             df_election,
             5,
         )
+    
+    def prepare_dim_politique(self, df_election):
+        """
+        Prépare les données pour la dimension politique.
+        
+        Args:
+            df_election: DataFrame des données électorales combinées avec l'orientation politique
+        
+        Returns:
+            DataFrame formaté pour dim_politique
+        """
+        logger.info("🔄 Préparation des données pour dim_politique")
+        
+        if df_election is None:
+            logger.error("❌ Les données électorales sont None")
+            return None
+            
+        try:
+            # Sélection et renommage des colonnes nécessaires
+            dim_politique = df_election.select(
+                col("id_parti").cast(IntegerType()).alias("etiquette_parti"),
+                col("annee").cast(IntegerType()).alias("annee"),
+                col("code_dept").alias("code_dept"),
+                col("candidat").alias("candidat"),
+                col("total_voix").cast(IntegerType()).alias("total_voix"),
+                col("orientation_politique").alias("orientation_politique")
+            )
+            
+            # Ajout d'un ID unique
+            window_spec = Window.orderBy("annee", "code_dept", "candidat")
+            dim_politique = dim_politique.withColumn(
+                "id", F.row_number().over(window_spec)
+            )
+            
+            # Réorganisation des colonnes pour avoir l'ID en premier
+            dim_politique = dim_politique.select(
+                "id", "etiquette_parti", "annee", "code_dept", "candidat", "total_voix", "orientation_politique"
+            )
+            
+            # Vérification que code_dept est bien limité à 3 caractères
+            dim_politique = dim_politique.withColumn(
+                "code_dept",
+                F.when(F.length("code_dept") > 3, F.substring("code_dept", 1, 3))
+                .otherwise(F.col("code_dept"))
+            )
+            
+            # Afficher un échantillon
+            dim_politique.show(5, truncate=False)
+            
+            # Récupérer le nombre de lignes
+            count_rows = dim_politique.count()
+            logger.info(f"✅ Dimension politique préparée avec {count_rows} lignes")
+            
+            return dim_politique
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données politiques: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+            
+    def prepare_dim_securite(self, df_securite):
+        """
+        Prépare les données pour la dimension sécurité.
+        
+        Args:
+            df_securite: DataFrame des données de sécurité (pandas)
+        
+        Returns:
+            DataFrame formaté pour dim_securite
+        """
+        logger.info("🔄 Préparation des données pour dim_securite")
+        
+        try:
+            # Vérifier si le DataFrame est de type pandas et le convertir en DataFrame Spark
+            if isinstance(df_securite, pd.DataFrame):
+                logger.info("🔄 Conversion du DataFrame pandas en DataFrame Spark")
+                # Prétraiter côté pandas pour éviter problèmes de conversion
+                df_securite = df_securite.rename(columns={
+                    'Année': 'annee',
+                    'Département': 'code_dept',
+                    'Délits_total': 'delits_total'
+                })
+                
+                # Sélection des colonnes nécessaires uniquement
+                df_securite = df_securite[['annee', 'code_dept', 'delits_total']]
+                
+                # Conversion en types appropriés avant passage à Spark
+                df_securite['annee'] = df_securite['annee'].astype(int)
+                df_securite['delits_total'] = df_securite['delits_total'].astype(int)
+                df_securite['code_dept'] = df_securite['code_dept'].astype(str)
+                
+                # S'assurer que code_dept ne dépasse pas 3 caractères
+                df_securite['code_dept'] = df_securite['code_dept'].apply(
+                    lambda x: x[:3] if len(x) > 3 else x
+                )
+                
+                # Création du schéma Spark explicite
+                schema = StructType([
+                    StructField("annee", IntegerType(), False),
+                    StructField("code_dept", StringType(), False),
+                    StructField("delits_total", IntegerType(), False)
+                ])
+                
+                # Conversion en DataFrame Spark
+                spark = SparkSession.builder.getOrCreate()
+                dim_securite = spark.createDataFrame(df_securite, schema=schema)
+            else:
+                # Si c'est déjà un DataFrame Spark
+                dim_securite = df_securite.select(
+                    col("annee").cast(IntegerType()).alias("annee"),
+                    col("code_dept").alias("code_dept"),
+                    col("delits_total").cast(IntegerType()).alias("delits_total")
+                )
+                
+            # Vérifier que code_dept est limité à 3 caractères
+            dim_securite = dim_securite.withColumn(
+                "code_dept",
+                F.when(F.length("code_dept") > 3, F.substring("code_dept", 1, 3))
+                .otherwise(F.col("code_dept"))
+            )
+            
+            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            
+            # Afficher un échantillon des données (éviter show() qui a causé un crash)
+            logger.info(f"✅ Dimension sécurité préparée avec succès")
+            
+            return dim_securite
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données de sécurité: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
+    def prepare_dim_sante(self, df_life):
+        """
+        Prépare les données pour la dimension santé.
+        
+        Args:
+            df_life: DataFrame des données d'espérance de vie
+        
+        Returns:
+            DataFrame formaté pour dim_sante
+        """
+        logger.info("🔄 Préparation des données pour dim_sante")
+        
+        if df_life is None:
+            logger.error("❌ Les données d'espérance de vie sont None")
+            return None
+            
+        try:
+            # Sélection et renommage des colonnes nécessaires
+            dim_sante = df_life.select(
+                col("CODE_DEP").alias("code_dept"),
+                col("Année").cast(IntegerType()).alias("annee"),
+                col("Espérance_Vie").cast(DoubleType()).alias("esperance_vie")
+            )
+            
+            # Vérifier que code_dept est limité à 3 caractères
+            dim_sante = dim_sante.withColumn(
+                "code_dept",
+                F.when(F.length("code_dept") > 3, F.substring("code_dept", 1, 3))
+                .otherwise(F.col("code_dept"))
+            )
+            
+            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            
+            # Afficher un échantillon
+            dim_sante.show(5, truncate=False)
+            
+            # Récupérer le nombre de lignes
+            count_rows = dim_sante.count()
+            logger.info(f"✅ Dimension santé préparée avec {count_rows} lignes")
+            
+            return dim_sante
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données de santé: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
+    def prepare_dim_education(self, df_education):
+        """
+        Prépare les données pour la dimension éducation.
+        
+        Args:
+            df_education: DataFrame des données d'éducation
+        
+        Returns:
+            DataFrame formaté pour dim_education
+        """
+        logger.info("🔄 Préparation des données pour dim_education")
+        
+        if df_education is None:
+            logger.error("❌ Les données d'éducation sont None")
+            return None
+            
+        try:
+            # Sélection et renommage des colonnes nécessaires
+            dim_education = df_education.select(
+                col("code_departement").alias("code_departement"),
+                col("annee_fermeture").cast(IntegerType()).alias("annee_fermeture"),
+                col("libelle_departement").alias("libelle_departement"),
+                col("nombre_total_etablissements").cast(IntegerType()).alias("nombre_total_etablissements"),
+                col("nb_public").cast(IntegerType()).alias("nb_public"),
+                col("nb_prive").cast(IntegerType()).alias("nb_prive"),
+                col("pct_public").cast(DoubleType()).alias("pct_public"),
+                col("pct_prive").cast(DoubleType()).alias("pct_prive")
+            )
+            
+            # Vérifier que code_departement est limité à 3 caractères
+            dim_education = dim_education.withColumn(
+                "code_departement",
+                F.when(F.length("code_departement") > 3, F.substring("code_departement", 1, 3))
+                .otherwise(F.col("code_departement"))
+            )
+            
+            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            
+            # Afficher un échantillon
+            dim_education.show(5, truncate=False)
+            
+            # Récupérer le nombre de lignes
+            count_rows = dim_education.count()
+            logger.info(f"✅ Dimension éducation préparée avec {count_rows} lignes")
+            
+            return dim_education
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données d'éducation: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
+    def prepare_dim_environnement(self, df_env):
+        """
+        Prépare les données pour la dimension environnement.
+        
+        Args:
+            df_env: DataFrame des données environnementales
+        
+        Returns:
+            DataFrame formaté pour dim_environnement
+        """
+        logger.info("🔄 Préparation des données pour dim_environnement")
+        
+        if df_env is None:
+            logger.error("❌ Les données environnementales sont None")
+            return None
+            
+        try:
+            # Sélection et renommage des colonnes nécessaires
+            dim_environnement = df_env.select(
+                col("Code_INSEE_Région").alias("code_insee_region"),
+                col("Année").cast(IntegerType()).alias("annee"),
+                col("Parc_installé_éolien_MW").cast(DoubleType()).alias("parc_eolien_mw"),
+                col("Parc_installé_solaire_MW").cast(DoubleType()).alias("parc_solaire_mw")
+            )
+            
+            # Vérifier que code_insee_region est limité à 3 caractères
+            dim_environnement = dim_environnement.withColumn(
+                "code_insee_region",
+                F.when(F.length("code_insee_region") > 3, F.substring("code_insee_region", 1, 3))
+                .otherwise(F.col("code_insee_region"))
+            )
+            
+            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            
+            # Afficher un échantillon
+            dim_environnement.show(5, truncate=False)
+            
+            # Récupérer le nombre de lignes
+            count_rows = dim_environnement.count()
+            logger.info(f"✅ Dimension environnement préparée avec {count_rows} lignes")
+            
+            return dim_environnement
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données environnementales: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
+    def prepare_dim_socio_economie(self, df_pib_inflation):
+        """
+        Prépare les données pour la dimension socio-économie.
+        
+        Args:
+            df_pib_inflation: DataFrame des données PIB et inflation
+        
+        Returns:
+            DataFrame formaté pour dim_socio_economie
+        """
+        logger.info("🔄 Préparation des données pour dim_socio_economie")
+        
+        if df_pib_inflation is None:
+            logger.error("❌ Les données PIB et inflation sont None")
+            return None
+            
+        try:
+            # Sélection et renommage des colonnes nécessaires
+            dim_socio_economie = df_pib_inflation.select(
+                col("Année").cast(IntegerType()).alias("annee"),
+                col("PIB_en_euros_par_habitant").cast(DoubleType()).alias("pib_euros_par_habitant"),
+                col("Code_INSEE_Région").alias("code_insee_region"),
+                col("Évolution_des_prix_à_la_consommation").cast(DoubleType()).alias("evolution_prix_conso"),
+                col("PIB_par_inflation").cast(DoubleType()).alias("pib_par_inflation")
+            )
+            
+            # Vérifier que code_insee_region est limité à 3 caractères
+            dim_socio_economie = dim_socio_economie.withColumn(
+                "code_insee_region",
+                F.when(F.length("code_insee_region") > 3, F.substring("code_insee_region", 1, 3))
+                .otherwise(F.col("code_insee_region"))
+            )
+            
+            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            
+            # Afficher un échantillon
+            dim_socio_economie.show(5, truncate=False)
+            
+            # Récupérer le nombre de lignes
+            count_rows = dim_socio_economie.count()
+            logger.info(f"✅ Dimension socio-économie préparée avec {count_rows} lignes")
+            
+            return dim_socio_economie
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données socio-économiques: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
+    def prepare_dim_technologie(self, df_tech):
+        """
+        Prépare les données pour la dimension technologie.
+        
+        Args:
+            df_tech: DataFrame des données technologiques
+        
+        Returns:
+            DataFrame formaté pour dim_technologie
+        """
+        logger.info("🔄 Préparation des données pour dim_technologie")
+        
+        if df_tech is None:
+            logger.error("❌ Les données technologiques sont None")
+            return None
+            
+        try:
+            # Sélection et renommage des colonnes nécessaires
+            dim_technologie = df_tech.select(
+                col("annee").cast(IntegerType()).alias("annee"),
+                col("dird_pib_france_pourcentages").cast(DoubleType()).alias("depenses_rd_pib")
+            )
+            
+            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            
+            # Afficher un échantillon
+            dim_technologie.show(5, truncate=False)
+            
+            # Récupérer le nombre de lignes
+            count_rows = dim_technologie.count()
+            logger.info(f"✅ Dimension technologie préparée avec {count_rows} lignes")
+            
+            return dim_technologie
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données technologiques: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
+    def prepare_dim_demographie(self, df_demo):
+        """
+        Prépare les données pour la dimension démographie.
+        
+        Args:
+            df_demo: DataFrame des données démographiques
+        
+        Returns:
+            DataFrame formaté pour dim_demographie
+        """
+        logger.info("🔄 Préparation des données pour dim_demographie")
+        
+        if df_demo is None:
+            logger.error("❌ Les données démographiques sont None")
+            return None
+            
+        try:
+            # Sélection et renommage des colonnes nécessaires
+            dim_demographie = df_demo.select(
+                col("Année").cast(IntegerType()).alias("annee"),
+                col("Code_Département").alias("code_departement"),
+                col("Nom_Département").alias("nom_departement"),
+                col("E_Total").cast(IntegerType()).alias("population_totale"),
+                col("H_Total").cast(IntegerType()).alias("population_hommes"),
+                col("F_Total").cast(IntegerType()).alias("population_femmes"),
+                col("E_0_19_ans").cast(IntegerType()).alias("pop_0_19"),
+                col("E_20_39_ans").cast(IntegerType()).alias("pop_20_39"),
+                col("E_40_59_ans").cast(IntegerType()).alias("pop_40_59"),
+                col("E_60_74_ans").cast(IntegerType()).alias("pop_60_74"),
+                col("E_75_et_plus").cast(IntegerType()).alias("pop_75_plus")
+            )
+            
+            # Vérifier que code_departement est limité à 3 caractères
+            dim_demographie = dim_demographie.withColumn(
+                "code_departement",
+                F.when(F.length("code_departement") > 3, F.substring("code_departement", 1, 3))
+                .otherwise(F.col("code_departement"))
+            )
+            
+            # L'ID sera attribué automatiquement par MySQL (AUTO_INCREMENT)
+            
+            # Afficher un échantillon
+            dim_demographie.show(5, truncate=False)
+            
+            # Récupérer le nombre de lignes
+            count_rows = dim_demographie.count()
+            logger.info(f"✅ Dimension démographie préparée avec {count_rows} lignes")
+            
+            return dim_demographie
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation des données démographiques: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
+    def prepare_fact_resultats_politique(self, dim_politique, dim_securite, dim_socio_economie, 
+                                        dim_sante, dim_environnement, dim_education, 
+                                        dim_demographie, dim_technologie):
+        """
+        Prépare la table de faits qui relie toutes les dimensions.
+        
+        Args:
+            dim_politique: DataFrame de la dimension politique
+            dim_securite: DataFrame de la dimension sécurité
+            dim_socio_economie: DataFrame de la dimension socio-économie
+            dim_sante: DataFrame de la dimension santé
+            dim_environnement: DataFrame de la dimension environnement
+            dim_education: DataFrame de la dimension éducation
+            dim_demographie: DataFrame de la dimension démographie
+            dim_technologie: DataFrame de la dimension technologie
+        
+        Returns:
+            DataFrame formaté pour fact_resultats_politique
+        """
+        logger.info("🔄 Préparation de la table de faits resultats_politique")
+        
+        try:
+            # On part de la dimension politique comme base
+            if dim_politique is None:
+                logger.error("❌ La dimension politique est None, impossible de créer la table de faits")
+                return None
+                
+            # Créer une clé unique annee_code_dpt pour la table de faits
+            fact_table = dim_politique.withColumn(
+                "annee_code_dpt", 
+                F.concat(F.col("annee").cast("string"), F.lit("_"), F.col("code_dept"))
+            )
+            
+            # Sélectionner les colonnes nécessaires pour la table de faits
+            fact_table = fact_table.select(
+                "annee_code_dpt", 
+                col("id").alias("id_parti"),  # id de la dimension politique
+                col("annee"),
+                col("code_dept")
+            )
+            
+            # Intégrer les ID des autres dimensions
+            
+            # Jointure avec dimension sécurité
+            if dim_securite is not None:
+                logger.info("🔄 Jointure avec dimension sécurité")
+                fact_table = fact_table.join(
+                    dim_securite.select(
+                        F.monotonically_increasing_id().alias("securite_id"), 
+                        col("annee").alias("sec_annee"), 
+                        col("code_dept").alias("sec_code_dept")
+                    ),
+                    (fact_table.annee == F.col("sec_annee")) & 
+                    (fact_table.code_dept == F.col("sec_code_dept")),
+                    "left"
+                ).drop("sec_annee", "sec_code_dept")
+            else:
+                fact_table = fact_table.withColumn("securite_id", F.lit(None).cast(IntegerType()))
+                
+            # Jointure avec dimension socio-économie (niveau région)
+            if dim_socio_economie is not None:
+                logger.info("🔄 Jointure avec dimension socio-économie")
+                # Pour simplifier, on utilise l'année uniquement car les données sont au niveau régional
+                # Une approche plus précise nécessiterait une table de correspondance département-région
+                fact_table = fact_table.join(
+                    dim_socio_economie.select(
+                        F.monotonically_increasing_id().alias("socio_eco_id"), 
+                        col("annee").alias("eco_annee")
+                    ),
+                    (fact_table.annee == F.col("eco_annee")),
+                    "left"
+                ).drop("eco_annee")
+            else:
+                fact_table = fact_table.withColumn("socio_eco_id", F.lit(None).cast(IntegerType()))
+                
+            # Jointure avec dimension santé
+            if dim_sante is not None:
+                logger.info("🔄 Jointure avec dimension santé")
+                fact_table = fact_table.join(
+                    dim_sante.select(
+                        F.monotonically_increasing_id().alias("sante_id"), 
+                        col("annee").alias("sante_annee"), 
+                        col("code_dept").alias("sante_code_dept")
+                    ),
+                    (fact_table.annee == F.col("sante_annee")) & 
+                    (fact_table.code_dept == F.col("sante_code_dept")),
+                    "left"
+                ).drop("sante_annee", "sante_code_dept")
+            else:
+                fact_table = fact_table.withColumn("sante_id", F.lit(None).cast(IntegerType()))
+                
+            # Jointure avec dimension environnement (niveau région)
+            if dim_environnement is not None:
+                logger.info("🔄 Jointure avec dimension environnement")
+                # Pour simplifier, on utilise l'année uniquement car les données sont au niveau régional
+                fact_table = fact_table.join(
+                    dim_environnement.select(
+                        F.monotonically_increasing_id().alias("environnement_id"), 
+                        col("annee").alias("env_annee")
+                    ),
+                    (fact_table.annee == F.col("env_annee")),
+                    "left"
+                ).drop("env_annee")
+            else:
+                fact_table = fact_table.withColumn("environnement_id", F.lit(None).cast(IntegerType()))
+                
+            # Jointure avec dimension éducation
+            if dim_education is not None:
+                logger.info("🔄 Jointure avec dimension éducation")
+                fact_table = fact_table.join(
+                    dim_education.select(
+                        F.monotonically_increasing_id().alias("education_id"), 
+                        col("annee_fermeture").alias("edu_annee"), 
+                        col("code_departement").alias("edu_code_dept")
+                    ),
+                    (fact_table.annee == F.col("edu_annee")) & 
+                    (fact_table.code_dept == F.col("edu_code_dept")),
+                    "left"
+                ).drop("edu_annee", "edu_code_dept")
+            else:
+                fact_table = fact_table.withColumn("education_id", F.lit(None).cast(IntegerType()))
+                
+            # Jointure avec dimension démographie
+            if dim_demographie is not None:
+                logger.info("🔄 Jointure avec dimension démographie")
+                fact_table = fact_table.join(
+                    dim_demographie.select(
+                        F.monotonically_increasing_id().alias("demographie_id"), 
+                        col("annee").alias("demo_annee"), 
+                        col("code_departement").alias("demo_code_dept")
+                    ),
+                    (fact_table.annee == F.col("demo_annee")) & 
+                    (fact_table.code_dept == F.col("demo_code_dept")),
+                    "left"
+                ).drop("demo_annee", "demo_code_dept")
+            else:
+                fact_table = fact_table.withColumn("demographie_id", F.lit(None).cast(IntegerType()))
+                
+            # Jointure avec dimension technologie (niveau national)
+            if dim_technologie is not None:
+                logger.info("🔄 Jointure avec dimension technologie")
+                fact_table = fact_table.join(
+                    dim_technologie.select(
+                        F.monotonically_increasing_id().alias("technologie_id"), 
+                        col("annee").alias("tech_annee")
+                    ),
+                    (fact_table.annee == F.col("tech_annee")),
+                    "left"
+                ).drop("tech_annee")
+            else:
+                fact_table = fact_table.withColumn("technologie_id", F.lit(None).cast(IntegerType()))
+            
+            # Sélectionner les colonnes finales pour la table de faits
+            fact_table = fact_table.select(
+                "annee_code_dpt",
+                "id_parti",
+                "securite_id",
+                "socio_eco_id",
+                "sante_id",
+                "environnement_id",
+                "education_id",
+                "demographie_id",
+                "technologie_id"
+            )
+            
+            # IMPORTANT: Nous utilisons count() au lieu de show() pour éviter les problèmes d'affichage
+            count_rows = fact_table.count()
+            logger.info(f"✅ Table de faits préparée avec {count_rows} lignes")
+            
+            return fact_table
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la préparation de la table de faits: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
 
     # TODO Rename this here and in `transform_environmental_data`, `transform_pib_outre_mer`, `fill_missing_pib_mayotte`, `combine_all_pib_data`, `transform_inflation_data`, `combine_pib_and_inflation`, `transform_education_data`, `calculate_closed_by_year_and_dept_education`, `transform_demography_data` and `combine_election_and_orientation_politique`
     def _extracted_from_combine_election_and_orientation_politique_52(

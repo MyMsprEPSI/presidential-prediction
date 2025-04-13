@@ -1,9 +1,14 @@
 # main.py
 
 import logging
+import os
 from etl.extract import DataExtractor
 from etl.transform import DataTransformer
 from etl.loader import DataLoader
+from dotenv import load_dotenv
+
+# Chargement des variables d'environnement
+load_dotenv()
 
 # Configuration du logger
 logging.basicConfig(
@@ -177,22 +182,34 @@ def transform_data(data, spark):
         spark: Session Spark active
         
     Returns:
-        dict: Dictionnaire des DataFrames transformés
+        dict: Dictionnaire des DataFrames transformés et préparés pour le chargement
     """
     logger.info("🚀 Transformation des données")
     transformer = DataTransformer()
+    
+    # Dictionnaire pour stocker les données transformées
+    transformed_data = {}
+    
+    # Dictionnaire pour stocker les données préparées pour le schéma en étoile
+    star_schema_data = {}
+    
     # Transformation des données environnementales
-    df_transformed = transformer.transform_environmental_data(data['env'])
-    if df_transformed is None:
+    df_env_transformed = transformer.transform_environmental_data(data['env'])
+    if df_env_transformed is None:
         logger.error("❌ Échec de la transformation des données environnementales.")
-        return None
-    transformed_data = {'env': df_transformed}
+        return None, None
+    transformed_data['env'] = df_env_transformed
+    
+    # Préparation des données environnementales pour le schéma en étoile
+    dim_environnement = transformer.prepare_dim_environnement(df_env_transformed)
+    star_schema_data['dim_environnement'] = dim_environnement
+    
     # Transformation des données PIB
     df_pib_transformed = transformer.transform_pib_outre_mer(data['pib'], data['region_codes'])
     df_pib_transformed_completed = transformer.fill_missing_pib_mayotte(df_pib_transformed)
     if df_pib_transformed_completed is None:
         logger.error("❌ Remplissage PIB Mayotte échoué.")
-        return None
+        return None, None
 
     # Combinaison finale de toutes les données PIB
     df_pib_total = transformer.combine_all_pib_data(
@@ -200,44 +217,52 @@ def transform_data(data, spark):
     )
     if df_pib_total is None:
         logger.error("❌ Combinaison PIB échouée.")
-        return None
+        return None, None
 
     # Transformation des données d'inflation et combinaison avec PIB
     df_inflation_transformed = transformer.transform_inflation_data(data['inflation'])
     if df_inflation_transformed is None:
         logger.error("❌ Transformation Inflation échouée.")
-        return None
+        return None, None
 
     df_pib_inflation = transformer.combine_pib_and_inflation(
         df_pib_total, df_inflation_transformed
     )
     if df_pib_inflation is None:
         logger.error("❌ Fusion PIB + Inflation échouée.")
-        return None
+        return None, None
     transformed_data['pib_inflation'] = df_pib_inflation
+    
+    # Préparation des données socio-économiques pour le schéma en étoile
+    dim_socio_economie = transformer.prepare_dim_socio_economie(df_pib_inflation)
+    star_schema_data['dim_socio_economie'] = dim_socio_economie
 
     # Transformation des données de technologie
     df_technologie_transformed = transformer.transform_technologie_data(data['technologie'])
     if df_technologie_transformed is None:
         logger.error("❌ Transformation des données de technologie échouée.")
-        return None
+        return None, None
     transformed_data['technologie'] = df_technologie_transformed
+    
+    # Préparation des données de technologie pour le schéma en étoile
+    dim_technologie = transformer.prepare_dim_technologie(df_technologie_transformed)
+    star_schema_data['dim_technologie'] = dim_technologie
 
     # Transformation des données électorales
     df_election_1965_2012_transformed = transformer.transform_election_data_1965_2012(data['election_1965_2012'])
     if df_election_1965_2012_transformed is None:
         logger.error("❌ Transformation des données électorales 1965-2012 échouée.")
-        return None
+        return None, None
 
     df_election_2017_transformed = transformer.transform_election_data_2017(data['election_2017'])
     if df_election_2017_transformed is None:
         logger.error("❌ Transformation des données électorales 2017 échouée.")
-        return None
+        return None, None
 
     df_election_2022_transformed = transformer.transform_election_data_2022(data['election_2022'])
     if df_election_2022_transformed is None:
         logger.error("❌ Transformation des données électorales 2022 échouée.")
-        return None
+        return None, None
 
     # Combinaison de toutes les années électorales
     df_election_final = transformer.combine_all_years(
@@ -252,30 +277,46 @@ def transform_data(data, spark):
     )
     if df_election_final is None:
         logger.error("❌ Combinaison des données électorales échouée.")
-        return None
+        return None, None
     transformed_data['election'] = df_election_final
+    
+    # Préparation des données politiques pour le schéma en étoile
+    dim_politique = transformer.prepare_dim_politique(df_election_final)
+    star_schema_data['dim_politique'] = dim_politique
 
     # Transformation des données démographiques
     df_demographie_transformed = transformer.transform_demography_data(data['demographie'])
     if df_demographie_transformed is None:
         logger.error("❌ Échec de la transformation des données de démographie.")
-        return None
+        return None, None
     transformed_data['demographie'] = df_demographie_transformed
+    
+    # Préparation des données démographiques pour le schéma en étoile
+    dim_demographie = transformer.prepare_dim_demographie(df_demographie_transformed)
+    star_schema_data['dim_demographie'] = dim_demographie
 
     # Transformation des données d'éducation
     df_edu_clean = transformer.transform_education_data(data['education'])
     df_edu_grouped = transformer.calculate_closed_by_year_and_dept_education(df_edu_clean)
     if df_edu_grouped is None:
         logger.error("❌ Échec du calcul des statistiques d'éducation")
-        return None
+        return None, None
     transformed_data['education'] = df_edu_grouped
+    
+    # Préparation des données d'éducation pour le schéma en étoile
+    dim_education = transformer.prepare_dim_education(df_edu_grouped)
+    star_schema_data['dim_education'] = dim_education
 
     # Transformation des données de sécurité
     df_security_transformed = transformer.transform_security_data(data['security'])
     if df_security_transformed is None:
         logger.error("❌ Échec de la transformation des données de sécurité")
-        return None
+        return None, None
     transformed_data['security'] = df_security_transformed
+    
+    # Préparation des données de sécurité pour le schéma en étoile
+    dim_securite = transformer.prepare_dim_securite(df_security_transformed)
+    star_schema_data['dim_securite'] = dim_securite
 
     # Transformation des données de santé
     df_life_final = transformer.transform_life_expectancy_data(
@@ -283,27 +324,60 @@ def transform_data(data, spark):
     )
     if df_life_final is None:
         logger.error("❌ Échec de la transformation des données d'espérance de vie.")
-        return None
+        return None, None
     df_life_final = transformer.fill_missing_mayotte_life_expectancy(df_life_final)
     transformed_data['life_expectancy'] = df_life_final
+    
+    # Préparation des données de santé pour le schéma en étoile
+    dim_sante = transformer.prepare_dim_sante(df_life_final)
+    star_schema_data['dim_sante'] = dim_sante
+    
+    # Création de la table de faits
+    fact_resultats_politique = transformer.prepare_fact_resultats_politique(
+        dim_politique, 
+        dim_securite, 
+        dim_socio_economie, 
+        dim_sante, 
+        dim_environnement, 
+        dim_education, 
+        dim_demographie, 
+        dim_technologie
+    )
+    star_schema_data['fact_resultats_politique'] = fact_resultats_politique
 
     logger.info("✅ Transformation de toutes les données réussie")
-    return transformed_data
+    return transformed_data, star_schema_data
 
 
-def load_data(data, spark, file_paths):
+def load_data(data, star_schema_data, spark, file_paths):
     """
-    Charge les données transformées dans des fichiers CSV.
+    Charge les données transformées dans des fichiers CSV et dans la base de données MySQL.
     
     Args:
         data (dict): Dictionnaire des DataFrames transformés
+        star_schema_data (dict): Dictionnaire des DataFrames préparés pour le schéma en étoile
         spark: Session Spark active
         file_paths (dict): Chemins des fichiers
     """
     logger.info("🚀 Chargement des données")
-    loader = DataLoader(spark)
+    
+    # Paramètres de connexion MySQL depuis les variables d'environnement
+    jdbc_url = os.getenv("MYSQL_JDBC_URL", "jdbc:mysql://localhost:3306")
+    user = os.getenv("MYSQL_USER", "root")
+    password = os.getenv("MYSQL_PASSWORD", "")
+    database = os.getenv("MYSQL_DATABASE", "elections_presidentielles")
+    
+    # Initialisation du DataLoader
+    loader = DataLoader(
+        spark=spark,
+        jdbc_url=jdbc_url,
+        user=user,
+        password=password,
+        database=database
+    )
 
-    # Sauvegarde des données dans des fichiers CSV
+    # 1. Sauvegarde des données transformées dans des fichiers CSV
+    logger.info("🔄 Sauvegarde des données transformées en CSV...")
     loader.save_to_csv(data['env'], file_paths['input_file_path'])
     loader.save_to_csv(data['education'], file_paths['education_file'])
     loader.save_to_csv(data['pib_inflation'], "pib_inflation_final.csv")
@@ -312,6 +386,35 @@ def load_data(data, spark, file_paths):
     loader.save_to_csv(data['life_expectancy'], "esperance_de_vie_par_departement_2000_2022.csv")
     loader.save_to_csv(data['security'], "delits_par_departement_1996_2022.csv")
     loader.save_to_csv(data['demographie'], file_paths['demo_csv'])
+
+    try:
+        # *** MODIFICATION 1: Supprimer d'abord la table de faits pour libérer les contraintes FK ***
+        loader.drop_fact_table()
+        
+        # 2. Chargement des données dans MySQL selon le schéma en étoile
+        logger.info("🔄 Chargement des données dans MySQL...")
+        
+        # Chargement des dimensions avec TRUNCATE au lieu de DROP+CREATE
+        logger.info("🔄 Chargement des dimensions...")
+        loader.truncate_and_load_dim("dim_politique", star_schema_data['dim_politique'])
+        loader.truncate_and_load_dim("dim_securite", star_schema_data['dim_securite'])
+        loader.truncate_and_load_dim("dim_sante", star_schema_data['dim_sante'])
+        loader.truncate_and_load_dim("dim_education", star_schema_data['dim_education'])
+        loader.truncate_and_load_dim("dim_environnement", star_schema_data['dim_environnement'])
+        loader.truncate_and_load_dim("dim_socio_economie", star_schema_data['dim_socio_economie'])
+        loader.truncate_and_load_dim("dim_technologie", star_schema_data['dim_technologie'])
+        loader.truncate_and_load_dim("dim_demographie", star_schema_data['dim_demographie'])
+        
+        # Chargement de la table de faits
+        logger.info("🔄 Chargement de la table de faits...")
+        if star_schema_data['fact_resultats_politique'] is not None:
+            loader.load_fact_resultats_politique(star_schema_data['fact_resultats_politique'], mode="append")
+        else:
+            logger.warning("⚠️ La table de faits est None, chargement ignoré")
+    except Exception as e:
+        logger.error(f"❌ Erreur lors du chargement MySQL: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
 
     # Définition des chemins vers les fichiers consolidés
     election_csv = "data/processed_data/vote_presidentiel_par_dept_1965_2022_processed.csv"
@@ -323,7 +426,8 @@ def load_data(data, spark, file_paths):
     demo_csv = "data/processed_data/demographie_fusion_processed.csv"
     tech_csv = "data/processed_data/technologie_pib_france_1990_2023_processed.csv"
 
-    # Génération du fichier consolidé
+    # 3. Génération du fichier consolidé CSV
+    logger.info("🔄 Génération du fichier consolidé...")
     loader.generate_consolidated_csv_from_files(
         election_csv=election_csv,
         security_csv=security_csv,
@@ -356,14 +460,14 @@ def main():
             logger.error("❌ Échec de l'étape d'extraction. Arrêt du programme.")
             return
             
-        # Transformation des données
-        transformed_data = transform_data(extracted_data, spark)
-        if transformed_data is None:
+        # Transformation des données (ajout du retour star_schema_data)
+        transformed_data, star_schema_data = transform_data(extracted_data, spark)
+        if transformed_data is None or star_schema_data is None:
             logger.error("❌ Échec de l'étape de transformation. Arrêt du programme.")
             return
             
-        # Chargement des données
-        load_data(transformed_data, spark, extracted_data['file_paths'])
+        # Chargement des données (ajout du paramètre star_schema_data)
+        load_data(transformed_data, star_schema_data, spark, extracted_data['file_paths'])
         
         # Arrêt de la session Spark
         from pyspark.sql import SparkSession
@@ -374,6 +478,8 @@ def main():
         
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'exécution du processus ETL : {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise
 
 
@@ -382,4 +488,6 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'exécution du processus ETL : {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise
