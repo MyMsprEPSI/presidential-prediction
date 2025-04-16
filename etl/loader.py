@@ -532,16 +532,6 @@ class DataLoader:
             # Variables constantes
             TARGET_YEARS = [2002, 2007, 2012, 2017, 2022]
             desired_depts = [f"{i:02d}" for i in range(1, 96) if i != 20]
-            DEPT_FILE = "data/politique/departements-france.csv"
-
-            # Charger les départements
-            if os.path.exists(DEPT_FILE):
-                try:
-                    df_depts = pd.read_csv(DEPT_FILE)
-                    # Insérer les départements dans la table de référence
-                    self.insert_data_to_mysql("departements_france", df_depts)
-                except Exception as e:
-                    logger.warning(f"⚠️ Impossible de charger les départements: {str(e)}")
             
             # 1. Charger les données à partir des fichiers CSV
             csv_paths = {
@@ -586,14 +576,31 @@ class DataLoader:
 
     def create_fact_table(self, target_years, desired_depts):
         """
-        Crée la table de faits à partir des dimensions
+        Crée la table de faits à partir des dimensions en utilisant une correspondance
+        département-région directement depuis le fichier CSV, sans dépendre d'une table en base de données.
         """
-        connection = self._establish_connection()
-        if not connection:
-            logger.error("❌ Impossible de se connecter à MySQL pour les données de faits")
-            return False
-            
+        connection = None
+        DEPT_FILE = "data/politique/departements-france.csv"
+        
         try:
+            # Charger le mapping département-région depuis le fichier CSV
+            dept_to_region = {}
+            if os.path.exists(DEPT_FILE):
+                try:
+                    df_dept_mapping = pd.read_csv(DEPT_FILE)
+                    # Créer un dictionnaire de correspondance {code_dept: code_region}
+                    for _, row in df_dept_mapping.iterrows():
+                        dept_code = str(row['code_departement']).zfill(2)  # Format sur 2 chiffres
+                        region_code = str(row['code_region']).strip()
+                        dept_to_region[dept_code] = region_code
+                except Exception as e:
+                    logger.warning(f"⚠️ Impossible de charger le fichier de correspondance département-région: {str(e)}")
+            
+            connection = self._establish_connection()
+            if not connection:
+                logger.error("❌ Impossible de se connecter à MySQL pour les données de faits")
+                return False
+                
             cursor = connection.cursor()
             
             # Préparation d'un DataFrame pour la table de faits
@@ -641,11 +648,8 @@ class DataLoader:
                     result = cursor.fetchone()
                     demographie_id = result[0] if result else None
                     
-                    # Pour socio_economie et environnement, nous devons passer par la région
-                    cursor.execute(f"""SELECT code_region FROM departements_france 
-                                    WHERE code_departement = '{dept}'""")
-                    region_result = cursor.fetchone()
-                    region_code = region_result[0] if region_result else None
+                    # Récupérer le code région directement du dictionnaire
+                    region_code = dept_to_region.get(dept)
                     
                     socio_eco_id = None
                     environnement_id = None
