@@ -43,7 +43,7 @@ def main():
     logger = logging.getLogger(__name__)
 
     file_path = "./../data/jeu_entrainement/previews_presidentiel.csv"
-    output_md = "result_predict.md"
+    output_md = "result_predict_de_base.md"
 
     try:
         df = pd.read_csv(file_path, sep=";")
