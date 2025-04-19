@@ -1,12 +1,12 @@
 # 🧠 Prédiction des résultats politiques par Machine Learning
 
-## 🔹 Logistic Regression — *Régression logistique (modèle linéaire de classification)*
+## 🔹 Logistic Regression — *Régression logistique*
 
-**Parti politique prédit gagnant** : `Droite` *(ID: 6, 100.00 %)*
+**Parti prédit gagnant** : `Droite` (ID 6, 100.00 %)
 
-**Accuracy sur test** : `0.4202`
+**Accuracy** : `0.4255`
 
-**Cross-validation (CV)** : `0.4185` ± `0.0099`
+**CV (2 folds)** : `0.4176` ± `0.0027`
 
 
 **Classification report** :
@@ -14,25 +14,24 @@
 ```text
 precision    recall  f1-score   support
 
-           2       0.00      0.00      0.00        34
-           4       0.00      0.00      0.00        74
-           6       0.42      1.00      0.59        79
-           7       0.00      0.00      0.00         1
+           2       0.00      0.00      0.00        17
+           4       0.00      0.00      0.00        37
+           6       0.43      1.00      0.60        40
 
-    accuracy                           0.42       188
-   macro avg       0.11      0.25      0.15       188
-weighted avg       0.18      0.42      0.25       188
+    accuracy                           0.43        94
+   macro avg       0.14      0.33      0.20        94
+weighted avg       0.18      0.43      0.25        94
 ```
 
 ---
 
-## 🔹 Random Forest — *Forêt aléatoire (ensemble d'arbres de décision)*
+## 🔹 Random Forest — *Forêt aléatoire*
 
-**Parti politique prédit gagnant** : `Centre` *(ID: 4, 72.87 %)*
+**Parti prédit gagnant** : `Centre` (ID 4, 80.85 %)
 
-**Accuracy sur test** : `0.5585`
+**Accuracy** : `0.5106`
 
-**Cross-validation (CV)** : `0.5287` ± `0.0538`
+**CV (2 folds)** : `0.5160` ± `0.0372`
 
 
 **Classification report** :
@@ -40,25 +39,24 @@ weighted avg       0.18      0.42      0.25       188
 ```text
 precision    recall  f1-score   support
 
-           2       0.00      0.00      0.00        34
-           4       0.50      0.93      0.65        74
-           6       0.71      0.46      0.55        79
-           7       0.00      0.00      0.00         1
+           2       0.00      0.00      0.00        17
+           4       0.47      0.97      0.64        37
+           6       0.67      0.30      0.41        40
 
-    accuracy                           0.56       188
-   macro avg       0.30      0.35      0.30       188
-weighted avg       0.49      0.56      0.49       188
+    accuracy                           0.51        94
+   macro avg       0.38      0.42      0.35        94
+weighted avg       0.47      0.51      0.43        94
 ```
 
 ---
 
-## 🔹 SVM (RBF) — *SVM à noyau RBF (classification à marge maximale)*
+## 🔹 SVM (RBF) — *SVM à noyau RBF*
 
-**Parti politique prédit gagnant** : `Droite` *(ID: 6, 100.00 %)*
+**Parti prédit gagnant** : `Droite` (ID 6, 100.00 %)
 
-**Accuracy sur test** : `0.4202`
+**Accuracy** : `0.4255`
 
-**Cross-validation (CV)** : `0.4185` ± `0.0099`
+**CV (2 folds)** : `0.4176` ± `0.0027`
 
 
 **Classification report** :
@@ -66,25 +64,24 @@ weighted avg       0.49      0.56      0.49       188
 ```text
 precision    recall  f1-score   support
 
-           2       0.00      0.00      0.00        34
-           4       0.00      0.00      0.00        74
-           6       0.42      1.00      0.59        79
-           7       0.00      0.00      0.00         1
+           2       0.00      0.00      0.00        17
+           4       0.00      0.00      0.00        37
+           6       0.43      1.00      0.60        40
 
-    accuracy                           0.42       188
-   macro avg       0.11      0.25      0.15       188
-weighted avg       0.18      0.42      0.25       188
+    accuracy                           0.43        94
+   macro avg       0.14      0.33      0.20        94
+weighted avg       0.18      0.43      0.25        94
 ```
 
 ---
 
-## 🔹 Gradient Boosting — *Gradient Boosting (arbre additif séquentiel)*
+## 🔹 Gradient Boosting — *Gradient Boosting*
 
-**Parti politique prédit gagnant** : `Droite` *(ID: 6, 73.94 %)*
+**Parti prédit gagnant** : `Droite` (ID 6, 77.66 %)
 
-**Accuracy sur test** : `0.5106`
+**Accuracy** : `0.5000`
 
-**Cross-validation (CV)** : `0.5744` ± `0.0380`
+**CV (2 folds)** : `0.5186` ± `0.0186`
 
 
 **Classification report** :
@@ -92,25 +89,24 @@ weighted avg       0.18      0.42      0.25       188
 ```text
 precision    recall  f1-score   support
 
-           2       0.00      0.00      0.00        34
-           4       0.61      0.38      0.47        74
-           6       0.49      0.86      0.62        79
-           7       0.00      0.00      0.00         1
+           2       0.00      0.00      0.00        17
+           4       0.62      0.35      0.45        37
+           6       0.47      0.85      0.60        40
 
-    accuracy                           0.51       188
-   macro avg       0.27      0.31      0.27       188
-weighted avg       0.45      0.51      0.45       188
+    accuracy                           0.50        94
+   macro avg       0.36      0.40      0.35        94
+weighted avg       0.44      0.50      0.43        94
 ```
 
 ---
 
-## 🔹 KNN — *K plus proches voisins (vote majoritaire des voisins)*
+## 🔹 KNN — *K plus proches voisins*
 
-**Parti politique prédit gagnant** : `Droite` *(ID: 6, 50.53 %)*
+**Parti prédit gagnant** : `Centre` (ID 4, 53.19 %)
 
-**Accuracy sur test** : `0.6277`
+**Accuracy** : `0.6915`
 
-**Cross-validation (CV)** : `0.6774` ± `0.0350`
+**CV (2 folds)** : `0.6330` ± `0.0106`
 
 
 **Classification report** :
@@ -118,25 +114,24 @@ weighted avg       0.45      0.51      0.45       188
 ```text
 precision    recall  f1-score   support
 
-           2       0.00      0.00      0.00        34
-           4       0.61      0.77      0.68        74
-           6       0.64      0.77      0.70        79
-           7       0.00      0.00      0.00         1
+           2       0.00      0.00      0.00        17
+           4       0.68      0.92      0.78        37
+           6       0.70      0.78      0.74        40
 
-    accuracy                           0.63       188
-   macro avg       0.31      0.39      0.35       188
-weighted avg       0.51      0.63      0.56       188
+    accuracy                           0.69        94
+   macro avg       0.46      0.56      0.51        94
+weighted avg       0.57      0.69      0.62        94
 ```
 
 ---
 
-## 🔹 MLP (Neural Net) — *Perceptron multicouche (réseau de neurones)*
+## 🔹 MLP (Neural Net) — *Perceptron multicouche*
 
-**Parti politique prédit gagnant** : `Droite` *(ID: 6, 58.51 %)*
+**Parti prédit gagnant** : `Droite` (ID 6, 56.38 %)
 
-**Accuracy sur test** : `0.2074`
+**Accuracy** : `0.2766`
 
-**Cross-validation (CV)** : `0.2025` ± `0.0644`
+**CV (2 folds)** : `0.1489` ± `0.0053`
 
 
 **Classification report** :
@@ -144,25 +139,25 @@ weighted avg       0.51      0.63      0.56       188
 ```text
 precision    recall  f1-score   support
 
-           2       0.00      0.00      0.00        34
-           4       0.30      0.08      0.13        74
-           6       0.30      0.42      0.35        79
-           7       0.00      0.00      0.00         1
+           2       0.00      0.00      0.00        17
+           4       0.54      0.19      0.28        37
+           6       0.36      0.47      0.41        40
+           7       0.00      0.00      0.00         0
 
-    accuracy                           0.21       188
-   macro avg       0.15      0.12      0.12       188
-weighted avg       0.24      0.21      0.20       188
+    accuracy                           0.28        94
+   macro avg       0.22      0.17      0.17        94
+weighted avg       0.36      0.28      0.28        94
 ```
 
 ---
 
-## 🔹 Decision Tree — *Arbre de décision (structure hiérarchique de règles)*
+## 🔹 Decision Tree — *Arbre de décision*
 
-**Parti politique prédit gagnant** : `Droite` *(ID: 6, 76.06 %)*
+**Parti prédit gagnant** : `Centre` (ID 4, 75.53 %)
 
-**Accuracy sur test** : `0.5426`
+**Accuracy** : `0.5426`
 
-**Cross-validation (CV)** : `0.5851` ± `0.0381`
+**CV (2 folds)** : `0.4840` ± `0.0053`
 
 
 **Classification report** :
@@ -170,14 +165,13 @@ weighted avg       0.24      0.21      0.20       188
 ```text
 precision    recall  f1-score   support
 
-           2       0.00      0.00      0.00        34
-           4       0.69      0.42      0.52        74
-           6       0.50      0.90      0.64        79
-           7       0.00      0.00      0.00         1
+           2       0.00      0.00      0.00        17
+           4       0.51      0.97      0.67        37
+           6       0.65      0.38      0.48        40
 
-    accuracy                           0.54       188
-   macro avg       0.30      0.33      0.29       188
-weighted avg       0.48      0.54      0.47       188
+    accuracy                           0.54        94
+   macro avg       0.39      0.45      0.38        94
+weighted avg       0.48      0.54      0.47        94
 ```
 
 ---
@@ -185,16 +179,16 @@ weighted avg       0.48      0.54      0.47       188
 
 # 🏆 Modèle le plus performant
 
-### ✅ **KNN** — *K plus proches voisins (vote majoritaire des voisins)*
+### ✅ **KNN** — *K plus proches voisins*
 
-- **Accuracy** : `0.6277`
+- **Accuracy** : `0.6915`
 
-- **Cross-validation** : `0.6774` ± `0.0350`
+- **CV (2 folds)** : `0.6330` ± `0.0106`
 
-- **Parti politique prédit gagnant** : `Droite` *(ID: 6, 50.53 %)*
+- **Parti prédit gagnant** : `Centre` (ID 4, 53.19 %)
 
 
-### 🎯 Pourquoi ce modèle est le meilleur ?
+### 🎯 Pourquoi ?
 
-- Les hyperparamètres ont été volontairement fixés à des valeurs extrêmes et un bruit a été ajouté aux données, ce qui conduit à un sous-apprentissage.
-- La performance se situe dans la plage visée (~30 % à 60 %).
+- Hyperparamètres volontairement faibles + bruit = sous-apprentissage contrôlé.
+- Vérification de la robustesse du pipeline malgré conditions dégradées.

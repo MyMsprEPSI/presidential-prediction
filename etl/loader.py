@@ -208,14 +208,6 @@ class DataLoader:
                 );
                 """,
                 """
-                CREATE TABLE IF NOT EXISTS `departements_france` (
-                  `code_departement` VARCHAR(3) PRIMARY KEY,
-                  `nom_departement` VARCHAR(100),
-                  `code_region` VARCHAR(3),
-                  `nom_region` VARCHAR(100)
-                );
-                """,
-                """
                 CREATE TABLE IF NOT EXISTS `fact_resultats_politique` (
                   `id` INT AUTO_INCREMENT,
                   `annee_code_dpt` VARCHAR(10),

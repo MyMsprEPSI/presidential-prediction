@@ -1,6 +1,19 @@
 CREATE DATABASE IF NOT EXISTS elections_presidentielles;
 USE elections_presidentielles;
 
+CREATE TABLE `model_results` (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  run_timestamp DATETIME    NOT NULL,
+  model_name VARCHAR(255)   NOT NULL,
+  description VARCHAR(255)  NOT NULL,
+  accuracy FLOAT            NOT NULL,
+  cv_mean FLOAT             NOT NULL,
+  cv_std FLOAT              NOT NULL,
+  winner_id INT             NOT NULL,
+  winner_name VARCHAR(100)  NOT NULL,
+  winner_pct FLOAT          NOT NULL
+);
+
 CREATE TABLE `dim_politique` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `etiquette_parti` INT,
