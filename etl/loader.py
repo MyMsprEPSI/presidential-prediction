@@ -572,7 +572,7 @@ class DataLoader:
         département-région directement depuis le fichier CSV, sans dépendre d'une table en base de données.
         """
         connection = None
-        DEPT_FILE = "data/politique/departements-france.csv"
+        DEPT_FILE = "data/origine/politique/departements-france.csv"
         
         try:
             # Charger le mapping département-région depuis le fichier CSV
@@ -721,7 +721,7 @@ class DataLoader:
         logger.info("🚀 Génération du fichier consolidé à partir des CSV...")
 
         # Variables constantes pour la lisibilité
-        DEPT_FILE = "data/politique/departements-france.csv"
+        DEPT_FILE = "data/origine/politique/departements-france.csv"
         TARGET_YEARS = [2002, 2007, 2012, 2017, 2022]
         
         # Liste des départements désirés (métropole, sans Corse)

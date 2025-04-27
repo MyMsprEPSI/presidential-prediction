@@ -1043,7 +1043,7 @@ class DataTransformer:
 
         try:
             # Chemin du fichier Excel
-            fichier_excel = "data/securite/tableaux-4001-ts.xlsx"
+            fichier_excel = "data/origine/securite/tableaux-4001-ts.xlsx"
 
             if not os.path.exists(fichier_excel):
                 logger.error(f"❌ Fichier Excel non trouvé: {fichier_excel}")

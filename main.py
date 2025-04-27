@@ -19,7 +19,7 @@ def extract_data():
     Returns:
         dict: Dictionnaire contenant tous les DataFrames extraits
     """
-    logger.info("🚀   Extraction des données")
+    logger.info("🚀 Extraction des données")
 
     # Initialisation de l'extracteur
     extractor = DataExtractor()
@@ -27,46 +27,46 @@ def extract_data():
     # Définition des chemins
     logger.info("📁   Configuration des chemins de fichiers...")
     input_file_path = (
-        "./data/environnemental/parc-regional-annuel-prod-eolien-solaire.csv"
+        "./data/origine/environnemental/parc-regional-annuel-prod-eolien-solaire.csv"
     )
 
     pib_files = [
-        "./data/socio-economie/PIB Guadeloupe.csv",
-        "./data/socio-economie/PIB Martinique.csv",
-        "./data/socio-economie/PIB Guyane.csv",
-        "./data/socio-economie/PIB La Réunion.csv",
-        "./data/socio-economie/PIB Mayotte.csv",
+        "./data/origine/socio-economie/PIB Guadeloupe.csv",
+        "./data/origine/socio-economie/PIB Martinique.csv",
+        "./data/origine/socio-economie/PIB Guyane.csv",
+        "./data/origine/socio-economie/PIB La Réunion.csv",
+        "./data/origine/socio-economie/PIB Mayotte.csv",
     ]
 
     region_codes = {
-        "./data/socio-economie/PIB Guadeloupe.csv": "01",
-        "./data/socio-economie/PIB Martinique.csv": "02",
-        "./data/socio-economie/PIB Guyane.csv": "03",
-        "./data/socio-economie/PIB La Réunion.csv": "04",
-        "./data/socio-economie/PIB Mayotte.csv": "06",
+        "./data/origine/socio-economie/PIB Guadeloupe.csv": "01",
+        "./data/origine/socio-economie/PIB Martinique.csv": "02",
+        "./data/origine/socio-economie/PIB Guyane.csv": "03",
+        "./data/origine/socio-economie/PIB La Réunion.csv": "04",
+        "./data/origine/socio-economie/PIB Mayotte.csv": "06",
     }
 
-    pib_xlsx_file = "./data/socio-economie/PIB 1990 - 2021.xlsx"
-    pib_2022_file = "./data/socio-economie/PIB par Région en 2022.csv"
-    inflation_xlsx_file = "./data/socio-economie/Essentiel_Inflation_donnees.xlsx"
-    technologie_xlsx_file = "./data/technologie/Effort-recherche_tableaux_2024.xlsx"
+    pib_xlsx_file = "./data/origine/socio-economie/PIB 1990 - 2021.xlsx"
+    pib_2022_file = "./data/origine/socio-economie/PIB par Région en 2022.csv"
+    inflation_xlsx_file = "./data/origine/socio-economie/Essentiel_Inflation_donnees.xlsx"
+    technologie_xlsx_file = "./data/origine/technologie/Effort-recherche_tableaux_2024.xlsx"
     election_files_pattern = (
-        "./data/politique/taux-votes/1965_2012/cdsp_presi*t2_circ.csv"
+        "./data/origine/politique/taux-votes/1965_2012/cdsp_presi*t2_circ.csv"
     )
     election_2017_file = (
-        "./data/politique/taux-votes/2017/Presidentielle_2017_Resultats_Tour_2_c.xls"
+        "./data/origine/politique/taux-votes/2017/Presidentielle_2017_Resultats_Tour_2_c.xls"
     )
-    election_2022_file = "./data/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
+    election_2022_file = "./data/origine/politique/taux-votes/2022/resultats-par-niveau-subcom-t2-france-entiere.xlsx"
     orientation_politique_file = (
-        "./data/politique/partie_politiques/partie_politiques_1965_2022.csv"
+        "./data/origine/politique/partie_politiques/partie_politiques_1965_2022.csv"
     )
-    education_file = "./data/education/fr-en-etablissements-fermes.csv"
-    life_expectancy_file = "./data/sante/valeurs_annuelles.csv"
-    departments_file_path = "./data/politique/departements-france.csv"
-    security_excel_file = "./data/securite/tableaux-4001-ts.xlsx"
-    demo_file_xls = "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
+    education_file = "./data/origine/education/fr-en-etablissements-fermes.csv"
+    life_expectancy_file = "./data/origine/sante/valeurs_annuelles.csv"
+    departments_file_path = "./data/origine/politique/departements-france.csv"
+    security_excel_file = "./data/origine/securite/tableaux-4001-ts.xlsx"
+    demo_file_xls = "./data/origine/demographie/estim-pop-dep-sexe-gca-1975-2023.xls"
     demo_file_xlsx = demo_file_xls.replace(".xls", ".xlsx")
-    demo_csv = "./data/demographie/demographie_fusion.csv"
+    demo_csv = "./data/origine/demographie/demographie_fusion.csv"
 
     # Données environnementales
     df_env = extractor.extract_environmental_data(input_file_path)
