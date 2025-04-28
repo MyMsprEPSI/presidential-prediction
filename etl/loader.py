@@ -522,7 +522,7 @@ class DataLoader:
             }
             
             # Variables constantes
-            TARGET_YEARS = [2002, 2007, 2012, 2017, 2022]
+            TARGET_YEARS = list(range(2000, 2023))  # All years from 2000 to 2022 inclusive 
             desired_depts = [f"{i:02d}" for i in range(1, 96) if i != 20]
             
             # 1. Charger les données à partir des fichiers CSV
@@ -722,7 +722,7 @@ class DataLoader:
 
         # Variables constantes pour la lisibilité
         DEPT_FILE = "data/origine/politique/departements-france.csv"
-        TARGET_YEARS = [2002, 2007, 2012, 2017, 2022]
+        TARGET_YEARS = list(range(2000, 2023))  # All years from 2000 to 2022 inclusive
         
         # Liste des départements désirés (métropole, sans Corse)
         # Utilisation d'une compréhension de liste plus claire

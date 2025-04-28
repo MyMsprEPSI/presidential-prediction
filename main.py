@@ -439,7 +439,7 @@ def load_data_to_mysql(transformed_data, spark, db_config=None):
     loader.insert_data_to_mysql("dim_education", transformed_data['education'], mappings['education'])
 
     # Variables utilisées pour la création de la table de faits
-    TARGET_YEARS = [2002, 2007, 2012, 2017, 2022]
+    TARGET_YEARS = list(range(2000, 2023))
     desired_depts = [f"{i:02d}" for i in range(1, 96) if i != 20]
     
     # Créer la table de faits uniquement à partir des dimensions déjà insérées

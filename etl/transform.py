@@ -980,7 +980,7 @@ class DataTransformer:
         )
 
         # 3. Années cibles
-        target_years = [2002, 2007, 2012, 2017, 2022]
+        target_years = list(range(2000, 2023))
         df_depts = df.select("code_departement", "libelle_departement").distinct().cache()
         result_dfs = []
 

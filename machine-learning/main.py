@@ -52,16 +52,20 @@ MODEL_DESCRIPTIONS = {
 # —————————————————————————————————————————————
 
 def load_data_from_mysql():
-    query = """
+    """
+    Charge les données depuis MySQL, y compris celles des années non électorales
+    """
+    # Cette requête sélectionne les données des années électorales (avec id_parti non NULL)
+    query_electoral = """
         (SELECT 
             dp.etiquette_parti        AS politique,
-            ds.delits_total,
-            dse.pib_par_inflation,
-            dsa.esperance_vie,
-            denv.parc_eolien_mw,
-            dedu.nombre_total_etablissements,
-            dd.population_totale,
-            dt.depenses_rd_pib,
+            ds.delits_total           AS securite,
+            dse.pib_par_inflation     AS socio_economie,
+            dsa.esperance_vie         AS sante,
+            denv.parc_eolien_mw       AS environnement,
+            dedu.nombre_total_etablissements AS education,
+            dd.population_totale      AS demographie,
+            dt.depenses_rd_pib        AS technologie,
             frp.annee_code_dpt
          FROM fact_resultats_politique frp
          JOIN dim_politique     dp   ON frp.id_parti         = dp.id
@@ -72,7 +76,33 @@ def load_data_from_mysql():
          JOIN dim_education     dedu ON frp.education_id     = dedu.id
          JOIN dim_demographie   dd   ON frp.demographie_id   = dd.id
          JOIN dim_technologie   dt   ON frp.technologie_id   = dt.id
-        ) AS dataset
+         WHERE frp.id_parti IS NOT NULL
+        ) AS electoral_dataset
+    """
+    
+    # Cette requête sélectionne les données des années NON électorales (avec id_parti NULL)
+    # Spécifie un CAST explicite pour la colonne NULL
+    query_non_electoral = """
+        (SELECT 
+            CAST(0 AS SIGNED)        AS politique, -- Utilisation de 0 comme valeur temporaire avec CAST explicite
+            ds.delits_total           AS securite,
+            dse.pib_par_inflation     AS socio_economie,
+            dsa.esperance_vie         AS sante,
+            denv.parc_eolien_mw       AS environnement,
+            dedu.nombre_total_etablissements AS education,
+            dd.population_totale      AS demographie,
+            dt.depenses_rd_pib        AS technologie,
+            frp.annee_code_dpt
+         FROM fact_resultats_politique frp
+         JOIN dim_securite      ds   ON frp.securite_id      = ds.id
+         JOIN dim_socio_economie dse ON frp.socio_eco_id     = dse.id
+         JOIN dim_sante         dsa  ON frp.sante_id         = dsa.id
+         JOIN dim_environnement denv ON frp.environnement_id = denv.id
+         JOIN dim_education     dedu ON frp.education_id     = dedu.id
+         JOIN dim_demographie   dd   ON frp.demographie_id   = dd.id
+         JOIN dim_technologie   dt   ON frp.technologie_id   = dt.id
+         WHERE frp.id_parti IS NULL
+        ) AS non_electoral_dataset
     """
 
     spark = SparkSession.builder \
@@ -80,18 +110,37 @@ def load_data_from_mysql():
         .config("spark.driver.extraClassPath", JDBC_JAR_PATH) \
         .getOrCreate()
 
-    df_spark = spark.read \
+    # Chargement des données électorales
+    df_electoral_spark = spark.read \
         .format("jdbc") \
         .option("url", JDBC_URL) \
         .option("driver", JDBC_DRIVER) \
-        .option("dbtable", query) \
+        .option("dbtable", query_electoral) \
         .option("user", DB_USER) \
         .option("password", DB_PASSWORD) \
         .load()
-
-    pdf = df_spark.toPandas()
-    spark.stop()   # ← relâche le JAR et nettoie proprement
-    return pdf
+    
+    # Chargement des données non-électorales
+    df_non_electoral_spark = spark.read \
+        .format("jdbc") \
+        .option("url", JDBC_URL) \
+        .option("driver", JDBC_DRIVER) \
+        .option("dbtable", query_non_electoral) \
+        .option("user", DB_USER) \
+        .option("password", DB_PASSWORD) \
+        .load()
+    
+    # Conversion en Pandas DataFrame
+    df_electoral = df_electoral_spark.toPandas()
+    df_non_electoral = df_non_electoral_spark.toPandas()
+    
+    # Remplacer la valeur temporaire 0 par NaN dans le DataFrame non électoral
+    df_non_electoral['politique'] = np.nan
+    
+    # Nettoyage
+    spark.stop()
+    
+    return df_electoral, df_non_electoral
 
 def create_custom_hyperparameter_models(X_train):
     """
@@ -192,17 +241,28 @@ def create_custom_hyperparameter_models(X_train):
         "Voting Ensemble": voting
     }
 
-def train_models(df):
+def train_models(df_electoral, df_non_electoral):
+    """
+    Entraîne les modèles sur les données électorales et utilise le meilleur modèle 
+    pour prédire les résultats des années non électorales.
+    
+    Args:
+        df_electoral (pd.DataFrame): Données des années électorales avec la colonne 'politique'
+        df_non_electoral (pd.DataFrame): Données des années non électorales
+    """
     # Suppression des warnings liés à la validation croisée
     import mysql.connector
     
+    # Préparation des données d'entraînement
     target = "politique"
-    features = [c for c in df.columns if c not in [target, "annee_code_dpt"]]
+    features = [c for c in df_electoral.columns if c not in [target, "annee_code_dpt"]]
 
+    # Option: limiter les features pour réduire la précision
     limited_features = features[:3] if len(features) > 3 else features
+    print(f"✅ Utilisation des features: {', '.join(limited_features)}")
 
-    X = df[limited_features].apply(pd.to_numeric, errors="coerce")
-    y = df[target].astype(int)
+    X = df_electoral[limited_features].apply(pd.to_numeric, errors="coerce")
+    y = df_electoral[target].astype(int)
 
     # Vérifier la distribution des classes
     print("Distribution des classes politiques dans le jeu de données:")
@@ -238,10 +298,12 @@ def train_models(df):
     
     print(f"✅ Données divisées en {len(X_train)} échantillons d'entraînement et {len(X_test)} échantillons de test (ratio 80/20)")
 
+    # Réduction du jeu d'entraînement pour diminuer les performances
     X_train_sample = X_train.sample(frac=0.5, random_state=42)
     y_train_sample = y_train.loc[X_train_sample.index]
     X_train = X_train_sample
     y_train = y_train_sample
+    print(f"📉 Sous-échantillonnage à {len(X_train)} observations d'entraînement (50%)")
     
     # Scaling - Nous utiliserons différents scalers selon les modèles
     standard_scaler = StandardScaler()
@@ -253,7 +315,7 @@ def train_models(df):
     X_train_minmax = minmax_scaler.fit_transform(X_train)
     X_test_minmax = minmax_scaler.transform(X_test)
     
-    # Obtenir des modèles optimisés
+    # Obtenir des modèles
     models = create_custom_hyperparameter_models(X_train)
     
     results = []
@@ -365,9 +427,86 @@ def train_models(df):
         "- Techniques spéciales pour gérer le déséquilibre des classes"
     ]
 
-    # Enregistrement du fichier Markdown
-    with open("result_predict.md", "w", encoding="utf-8") as f:
+    # Sélection du meilleur modèle pour les prédictions hors années électorales
+    best_model = None
+    for name, model in models.items():
+        if name == best["name"]:
+            best_model = model
+            break
+    
+    # Si un meilleur modèle a été trouvé, faire des prédictions sur les années non électorales
+    if best_model:
+        print(f"🔮 Application du modèle {best['name']} aux années sans présidentielle...")
+        
+        # Vérifier que nous avons des données non-électorales
+        if not df_non_electoral.empty:
+            # Identifier les années disponibles dans les données non électorales
+            non_electoral_years = sorted(set([
+                int(year_dept.split('_')[0]) 
+                for year_dept in df_non_electoral["annee_code_dpt"]
+                if '_' in year_dept
+            ]))
+            
+            print(f"📊 Années non-électorales disponibles: {non_electoral_years}")
+            
+            # Préparation des features pour les données non électorales
+            X_non = df_non_electoral[limited_features].apply(pd.to_numeric, errors="coerce")
+            
+            # Appliquer le même scaler que celui utilisé avec le meilleur modèle
+            if best["name"] == "KNN":
+                X_non_proc = minmax_scaler.transform(X_non)
+            else:
+                X_non_proc = standard_scaler.transform(X_non)
+            
+            # Faire les prédictions avec le meilleur modèle
+            preds = best_model.predict(X_non_proc)
+            df_non_electoral = df_non_electoral.copy()
+            df_non_electoral["predicted"] = preds
+            
+            # Agrégation des résultats par année
+            md_lines.append("\n## 🧪 Prédictions sur années sans présidentielle\n")
+            
+            # Pour chaque année non électorale, calculer le parti majoritaire
+            for year in non_electoral_years:
+                # Filtrer les données pour l'année courante
+                sub = df_non_electoral[df_non_electoral["annee_code_dpt"].str.startswith(f"{year}_")]
+                
+                if not sub.empty:
+                    counts = Counter(sub["predicted"])
+                    
+                    if counts:
+                        # Trouver le parti le plus fréquemment prédit
+                        label, cnt = counts.most_common(1)[0]
+                        pct = cnt / len(sub) * 100
+                        party = PARTY_LABELS.get(int(label), "Inconnu")
+                        
+                        md_lines.append(f"### Année {year}\n")
+                        md_lines.append(f"- **Parti majoritaire** : `{party}` (ID {label})\n")
+                        md_lines.append(f"- **Pourcentage** : {pct:.1f}%\n")
+                        md_lines.append(f"- **Nombre de départements** : {len(sub)}\n\n")
+                        
+                        # Répartition détaillée par parti politique
+                        md_lines.append("#### Répartition par parti\n")
+                        for pred_id, count in counts.most_common():
+                            pred_party = PARTY_LABELS.get(int(pred_id), "Inconnu")
+                            pred_pct = count / len(sub) * 100
+                            md_lines.append(f"- {pred_party} (ID {pred_id}): {count} dép. ({pred_pct:.1f}%)\n")
+                        
+                        md_lines.append("\n")
+            
+            print(f"✅ Prédictions effectuées pour {len(df_non_electoral)} observations de {len(non_electoral_years)} années non-électorales")
+        else:
+            print("⚠️ Pas de données disponibles pour les années non électorales")
+
+    # Enregistrement du fichier Markdown avec horodatage dans le nom du fichier
+    now = datetime.now()
+    file_timestamp = now.strftime("%d-%m-%Y_%Hh%M")
+    result_filename = f"result_predict_{file_timestamp}.md"
+    
+    with open(result_filename, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines))
+    
+    print(f"✅ Résultats enregistrés dans le fichier: {result_filename}")
     
     # Insertion des résultats dans la base de données
     try:
@@ -417,9 +556,6 @@ def train_models(df):
         
         # Ajouter une note sur le meilleur modèle
         print(f"🏆 Meilleur modèle : {best['name']} avec accuracy={best['accuracy']:.4f}")
-        
-    except mysql.connector.Error as err:
-        print(f"❌ Erreur lors de l'insertion dans la base de données: {err}")
     finally:
         # Fermer la connexion
         if 'conn' in locals() and conn.is_connected():
@@ -429,9 +565,13 @@ def train_models(df):
 
 def main():
     print("🔄 Chargement des données depuis MySQL via Spark…")
-    df = load_data_from_mysql()
-    print("✅ Données prêtes, lancement du pipeline ML optimisé.")
-    train_models(df)
+    df_electoral, df_non_electoral = load_data_from_mysql()
+    
+    print(f"✅ {len(df_electoral)} échantillons chargés pour les années électorales")
+    print(f"✅ {len(df_non_electoral)} échantillons chargés pour les années non-électorales")
+    
+    # Lancement du pipeline ML: entraînement + prédiction
+    train_models(df_electoral, df_non_electoral)
 
 
 if __name__ == "__main__":
