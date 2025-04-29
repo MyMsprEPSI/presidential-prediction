@@ -1,27 +1,55 @@
 version: "3.8"
 services:
     ###
+    ### APP PYTHON - ETL PREDICT
+    ### 
+    # app-etl:
+    #     container_name: "prediction-presidential-etl"
+    #     build:
+    #         context: ./docker/etl
+    #         dockerfile: Dockerfile
+    #     restart: unless-stopped
+    #     depends_on:
+    #         - mysql
+    #     networks:
+    #         - "prediction-presidential-network"
+
+    ###
+    ### APP PYTHON - MACHINE LEARNING
+    ### 
+    # app-machine-learning:
+    #     container_name: "prediction-presidential-machine-learning"
+    #     build:
+    #         context: ./docker/machine-learning
+    #         dockerfile: Dockerfile
+    #     restart: unless-stopped
+    #     depends_on:
+    #         - mysql
+    #     networks:
+    #         - "prediction-presidential-network"
+
+    ###
     ### MYSQL - BDD
     ###
     mysql:
-        container_name: "bigdata-project-mysql"
+        container_name: "prediction-presidential-mysql"
         image: "mysql:latest"
         restart: unless-stopped
         volumes:
-            - bigdata-project-mysql-data:/var/lib/mysql
-            - ./database/seed-bigdata.sql:/docker-entrypoint-initdb.d/init.sql
+            - prediction-presidential-mysql-data:/var/lib/mysql
+            - ./database/seed-prediction-presidential.sql:/docker-entrypoint-initdb.d/init.sql
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
         ports:
             - "3306:3306"
         networks:
-            - "bigdata-project-network"
+            - "prediction-presidential-network"
 
     ###
     ### PHPMYADMIN - VISUALISATION BDD
     ###
     phpmyadmin:
-        container_name: "bigdata-project-phpmyadmin"
+        container_name: "prediction-presidential-phpmyadmin"
         image: "phpmyadmin:latest"
         restart: unless-stopped
         depends_on:
@@ -31,12 +59,12 @@ services:
         ports:
             - "8080:80"
         networks:
-            - "bigdata-project-network"
+            - "prediction-presidential-network"
 
 networks:
-    bigdata-project-network:
+    prediction-presidential-network:
         driver: "bridge"
-        name: "bigdata-project-network"
+        name: "prediction-presidential-network"
 
 volumes:
-    bigdata-project-mysql-data:
+    prediction-presidential-mysql-data:

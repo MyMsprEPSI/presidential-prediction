@@ -794,15 +794,7 @@ class DataTransformer:
             round(((col("Hommes") + col("Femmes")) / 2), 2).alias("Espérance_Vie"),
         ).orderBy("CODE_DEP", "Année")
 
-        logger.info("✅ Transformation terminée ! Aperçu :")
-        df_final.show(10, truncate=False)
-
-        # Affichage de débogage : lignes non associées (si besoin)
-        df_unmatched = df_joined.filter(df_depts_norm["code_departement"].isNull())
-        logger.info("Lignes non associées après jointure :")
-        df_unmatched.select("Département", "Département_norm").distinct().show(
-            truncate=False
-        )
+        logger.info("✅ Transformation terminée !")
 
         return df_final
 
@@ -886,8 +878,9 @@ class DataTransformer:
         for colname in df.columns:
             df = df.withColumn(
                 colname,
-                F.when(F.col(colname).isNotNull(), F.trim(F.lower(F.col(colname))))
-                 .otherwise(F.lit("non spécifié"))
+                F.when(
+                    F.col(colname).isNotNull(), F.trim(F.lower(F.col(colname)))
+                ).otherwise(F.lit("non spécifié")),
             )
 
         # 3. Filtrer et formater le code département
@@ -895,9 +888,10 @@ class DataTransformer:
             # extraire un entier si possible
             df = df.withColumn(
                 "code_dept_int",
-                F.when(F.col("code_departement").rlike(r"^\d+$"),
-                       F.col("code_departement").cast(IntegerType()))
-                 .otherwise(None)
+                F.when(
+                    F.col("code_departement").rlike(r"^\d+$"),
+                    F.col("code_departement").cast(IntegerType()),
+                ).otherwise(None),
             )
             # ne garder que 1 ≤ code ≤ 95
             df = df.filter(
@@ -906,36 +900,38 @@ class DataTransformer:
             # formater en "01", "02", …, "95"
             df = df.withColumn(
                 "code_departement",
-                F.lpad(F.col("code_dept_int").cast("string"), 2, "0")
+                F.lpad(F.col("code_dept_int").cast("string"), 2, "0"),
             ).drop("code_dept_int")
 
         # 4. Conversion de 'date_fermeture' en DateType et extraction de l'année
         if "date_fermeture" in df.columns:
-            df = df.withColumn("date_fermeture", F.col("date_fermeture").cast(DateType()))
+            df = df.withColumn(
+                "date_fermeture", F.col("date_fermeture").cast(DateType())
+            )
             df = df.withColumn("annee_fermeture", F.year(F.col("date_fermeture")))
 
         # 5. Normalisation du code postal
         if "code_postal" in df.columns:
             df = df.withColumn(
                 "code_postal",
-                F.when(F.col("code_postal").isNull(), F.lit("00000"))
-                 .otherwise(F.trim(F.col("code_postal")))
+                F.when(F.col("code_postal").isNull(), F.lit("00000")).otherwise(
+                    F.trim(F.col("code_postal"))
+                ),
             )
 
         # 6. Séparation du secteur public/privé
         if "secteur_public_prive_libe" in df.columns:
             df = df.withColumn(
                 "secteur_public",
-                F.when(F.col("secteur_public_prive_libe") == "public", 1).otherwise(0)
+                F.when(F.col("secteur_public_prive_libe") == "public", 1).otherwise(0),
             ).withColumn(
                 "secteur_prive",
-                F.when(F.col("secteur_public_prive_libe") == "privé", 1).otherwise(0)
+                F.when(F.col("secteur_public_prive_libe") == "privé", 1).otherwise(0),
             )
 
         return self._extracted_from_combine_election_and_orientation_politique_52(
             "✅ Transformation des données d'éducation réussie.", df, 5
         )
-
 
     def calculate_closed_by_year_and_dept_education(self, df):
         """
@@ -950,7 +946,9 @@ class DataTransformer:
         import pyspark.sql.functions as F
         from pyspark.sql.functions import lit
 
-        logger.info("🚀 Calcul des statistiques de fermetures d'établissements par département et année...")
+        logger.info(
+            "🚀 Calcul des statistiques de fermetures d'établissements par département et année..."
+        )
 
         # 1. Agrégation initiale
         df_grouped = df.groupBy("annee_fermeture", "code_departement").agg(
@@ -964,24 +962,28 @@ class DataTransformer:
         df_grouped = df_grouped.withColumn(
             "pct_public",
             F.round(
-                F.when(F.col("nombre_total_etablissements") > 0,
-                       F.col("nb_public") * 100.0 / F.col("nombre_total_etablissements"))
-                 .otherwise(0.0),
-                2
-            )
+                F.when(
+                    F.col("nombre_total_etablissements") > 0,
+                    F.col("nb_public") * 100.0 / F.col("nombre_total_etablissements"),
+                ).otherwise(0.0),
+                2,
+            ),
         ).withColumn(
             "pct_prive",
             F.round(
-                F.when(F.col("nombre_total_etablissements") > 0,
-                       F.col("nb_prive") * 100.0 / F.col("nombre_total_etablissements"))
-                 .otherwise(0.0),
-                2
-            )
+                F.when(
+                    F.col("nombre_total_etablissements") > 0,
+                    F.col("nb_prive") * 100.0 / F.col("nombre_total_etablissements"),
+                ).otherwise(0.0),
+                2,
+            ),
         )
 
         # 3. Années cibles
         target_years = list(range(2000, 2023))
-        df_depts = df.select("code_departement", "libelle_departement").distinct().cache()
+        df_depts = (
+            df.select("code_departement", "libelle_departement").distinct().cache()
+        )
         result_dfs = []
 
         for year in target_years:
@@ -989,14 +991,16 @@ class DataTransformer:
             df_completed = df_year.join(
                 df_grouped.filter(F.col("annee_fermeture") == year),
                 on=["code_departement", "annee_fermeture", "libelle_departement"],
-                how="left"
-            ).na.fill({
-                "nombre_total_etablissements": 0,
-                "nb_public": 0,
-                "nb_prive": 0,
-                "pct_public": 0.0,
-                "pct_prive": 0.0
-            })
+                how="left",
+            ).na.fill(
+                {
+                    "nombre_total_etablissements": 0,
+                    "nb_public": 0,
+                    "nb_prive": 0,
+                    "pct_public": 0.0,
+                    "pct_prive": 0.0,
+                }
+            )
             result_dfs.append(df_completed)
 
         # 4. Conserver les autres années
@@ -1008,22 +1012,21 @@ class DataTransformer:
         for part in result_dfs[1:]:
             df_completed = df_completed.unionByName(part, allowMissingColumns=True)
 
-        df_completed = df_completed.na.fill({
-            "nombre_total_etablissements": 0,
-            "nb_public": 0,
-            "nb_prive": 0,
-            "pct_public": 0.0,
-            "pct_prive": 0.0
-        }).orderBy("annee_fermeture", "code_departement")
+        df_completed = df_completed.na.fill(
+            {
+                "nombre_total_etablissements": 0,
+                "nb_public": 0,
+                "nb_prive": 0,
+                "pct_public": 0.0,
+                "pct_prive": 0.0,
+            }
+        ).orderBy("annee_fermeture", "code_departement")
 
         df_depts.unpersist()
 
         return self._extracted_from__extracted_from_combine_election_and_orientation_politique_52_116(
             "✅ Calcul des statistiques complété. Aperçu :", df_completed, 10
         )
-        
-
-
 
     def transform_security_data(self, df):
         """
@@ -1065,10 +1068,12 @@ class DataTransformer:
             # Traitement de chaque feuille
             for dept in departements:
                 try:
-                    resultats = self._process_department_sheet(dept, xls, annees_cibles, resultats)
+                    resultats = self._process_department_sheet(
+                        dept, xls, annees_cibles, resultats
+                    )
                 except Exception as e:
                     logger.error(f"❌ Erreur sur le département {dept}: {str(e)}")
-                    
+
             # Création du DataFrame final
             df_final = self._create_final_security_dataframe(resultats)
 
@@ -1083,11 +1088,11 @@ class DataTransformer:
 
             logger.error(traceback.format_exc())
             return None
-            
+
     def _process_department_sheet(self, dept, xls, annees_cibles, resultats):
         """
         Traite une feuille de département et met à jour le dictionnaire des résultats.
-        
+
         :param dept: Code du département
         :param xls: Objet ExcelFile pandas
         :param annees_cibles: Ensemble des années à considérer
@@ -1095,7 +1100,7 @@ class DataTransformer:
         :return: Dictionnaire des résultats mis à jour
         """
         import pandas as pd
-        
+
         logger.info(f"✨ Traitement du département {dept}...")
         df_dept = xls.parse(dept)
         df_dept = df_dept.dropna(how="all")  # retirer les lignes totalement vides
@@ -1108,18 +1113,18 @@ class DataTransformer:
                         resultats[(annee, dept)] += df_dept[col].sum(skipna=True)
                 except Exception as e:
                     logger.warning(f"⚠️ Problème avec la colonne {col}: {str(e)}")
-                    
+
         return resultats
-        
+
     def _create_final_security_dataframe(self, resultats):
         """
         Crée le DataFrame final à partir du dictionnaire des résultats.
-        
+
         :param resultats: Dictionnaire {(année, département): total}
         :return: DataFrame pandas formaté
         """
         import pandas as pd
-        
+
         logger.info("✓ Création du DataFrame final...")
         df_final = pd.DataFrame(
             [
@@ -1141,9 +1146,7 @@ class DataTransformer:
             logger.info(
                 f"✓ Période couverte: de {df_final['Année'].min()} à {df_final['Année'].max()}"
             )
-            logger.info(
-                f"✓ {df_final['Département'].nunique()} départements traités"
-            )
+            logger.info(f"✓ {df_final['Département'].nunique()} départements traités")
             logger.info(f"✓ Total de {len(df_final)} lignes de données générées")
 
             # Échantillon des données
@@ -1154,7 +1157,7 @@ class DataTransformer:
                 logger.info(
                     f"{row['Année']},{row['Département']},{int(row['Délits_total'])}"
                 )
-                
+
         return df_final
 
     def transform_demography_data(self, df):
@@ -1357,13 +1360,17 @@ class DataTransformer:
         )
 
     # TODO Rename this here and in `calculate_closed_by_year_and_dept_education`, `transform_demography_data` and `_extracted_from_combine_election_and_orientation_politique_52`
-    def _extracted_from__extracted_from_combine_election_and_orientation_politique_52_116(self, arg0, arg1, arg2):
+    def _extracted_from__extracted_from_combine_election_and_orientation_politique_52_116(
+        self, arg0, arg1, arg2
+    ):
         logger.info(arg0)
         arg1.show(arg2, truncate=False)
         return arg1
 
     # TODO Rename this here and in `calculate_closed_by_year_and_dept_education`, `transform_demography_data` and `_extracted_from_combine_election_and_orientation_politique_52`
-    def _extracted_from__extracted_from_combine_election_and_orientation_politique_52_116(self, arg0, arg1, arg2):
+    def _extracted_from__extracted_from_combine_election_and_orientation_politique_52_116(
+        self, arg0, arg1, arg2
+    ):
         logger.info(arg0)
         arg1.show(arg2, truncate=False)
         return arg1

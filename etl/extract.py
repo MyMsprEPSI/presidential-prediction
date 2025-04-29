@@ -319,10 +319,7 @@ class DataExtractor:
         df = self._load_inflation_data(excel_path, schema)
         df = self._rename_inflation_column(df)
         logger.info(f"🛠️ Colonnes après extraction et renommage : {df.columns}")
-        df_filtered = self._filter_inflation_years(df)
-        logger.info("✅ Extraction des données d'inflation réussie :")
-        df_filtered.show(10, truncate=False)
-        return df_filtered
+        return self._filter_inflation_years(df)
 
     def _load_inflation_data(self, excel_path, schema):
         """Charge les données d'inflation depuis Excel avec le schéma spécifié."""
@@ -539,8 +536,8 @@ class DataExtractor:
             logger.info(
                 f"✓ Données d'éducation chargées avec succès depuis {input_path}"
             )
-            logger.info(f"✓ Nombre de lignes: {df.count()}")
-            logger.info(f"✓ Colonnes présentes: {', '.join(df.columns)}")
+            logger.info(f"✅ Nombre de lignes: {df.count()}")
+            logger.info(f"✅ Colonnes présentes: {', '.join(df.columns)}")
             return df
         except Exception as e:
             logger.error(
@@ -603,7 +600,7 @@ class DataExtractor:
                 for col in df_combined.columns
                 if isinstance(col, str) and col.startswith("_")
             ]
-            logger.info(f"✓ {len(year_cols)} colonnes d'années identifiées")
+            logger.info(f"✅ {len(year_cols)} colonnes d'années identifiées")
 
             return df_combined
 
