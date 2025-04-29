@@ -1,70 +1,70 @@
 version: "3.8"
 services:
-    ###
-    ### APP PYTHON - ETL PREDICT
-    ### 
-    # app-etl:
-    #     container_name: "prediction-presidential-etl"
-    #     build:
-    #         context: ./docker/etl
-    #         dockerfile: Dockerfile
-    #     restart: unless-stopped
-    #     depends_on:
-    #         - mysql
-    #     networks:
-    #         - "prediction-presidential-network"
+  ###
+  ### MYSQL - BDD
+  ###
+  mysql:
+    container_name: "prediction-presidential-mysql"
+    image: "mysql:latest"
+    restart: unless-stopped
+    volumes:
+      - prediction-presidential-mysql-data:/var/lib/mysql
+      - ./database/seed-prediction-presidential.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3306:3306"
+    networks:
+      - "prediction-presidential-network"
 
-    ###
-    ### APP PYTHON - MACHINE LEARNING
-    ### 
-    # app-machine-learning:
-    #     container_name: "prediction-presidential-machine-learning"
-    #     build:
-    #         context: ./docker/machine-learning
-    #         dockerfile: Dockerfile
-    #     restart: unless-stopped
-    #     depends_on:
-    #         - mysql
-    #     networks:
-    #         - "prediction-presidential-network"
+  ###
+  ### PHPMYADMIN - VISUALISATION BDD
+  ###
+  phpmyadmin:
+    container_name: "prediction-presidential-phpmyadmin"
+    image: "phpmyadmin:latest"
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+    ports:
+      - "8080:80"
+    networks:
+      - "prediction-presidential-network"
 
-    ###
-    ### MYSQL - BDD
-    ###
-    mysql:
-        container_name: "prediction-presidential-mysql"
-        image: "mysql:latest"
-        restart: unless-stopped
-        volumes:
-            - prediction-presidential-mysql-data:/var/lib/mysql
-            - ./database/seed-prediction-presidential.sql:/docker-entrypoint-initdb.d/init.sql
-        environment:
-            MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-        ports:
-            - "3306:3306"
-        networks:
-            - "prediction-presidential-network"
+  ###
+  ### APP PYTHON - ETL PREDICT
+  ###
+  # app-etl:
+  #   container_name: "prediction-presidential-etl"
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.etl
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - mysql
+  #   networks:
+  #     - "prediction-presidential-network"
 
-    ###
-    ### PHPMYADMIN - VISUALISATION BDD
-    ###
-    phpmyadmin:
-        container_name: "prediction-presidential-phpmyadmin"
-        image: "phpmyadmin:latest"
-        restart: unless-stopped
-        depends_on:
-            - mysql
-        environment:
-            PMA_HOST: mysql
-        ports:
-            - "8080:80"
-        networks:
-            - "prediction-presidential-network"
+  ###
+  ### APP PYTHON - MACHINE LEARNING
+  ###
+  # app-machine-learning:
+  #     container_name: "prediction-presidential-machine-learning"
+  #     build:
+  #         context: .
+  #         dockerfile: Dockerfile.machine-learning
+  #     restart: unless-stopped
+  #     depends_on:
+  #         - mysql
+  #     networks:
+  #         - "prediction-presidential-network"
 
 networks:
-    prediction-presidential-network:
-        driver: "bridge"
-        name: "prediction-presidential-network"
+  prediction-presidential-network:
+    driver: "bridge"
+    name: "prediction-presidential-network"
 
 volumes:
-    prediction-presidential-mysql-data:
+  prediction-presidential-mysql-data:
