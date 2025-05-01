@@ -6,15 +6,15 @@ from datetime import datetime
 
 # Liste des fichiers à analyser
 data_files = {
-    "Environnemental": "./data/environnemental/parc-regional-annuel-prod-eolien-solaire.csv",
-    "Demographie": "./data/demographie/estim-pop-dep-sexe-gca-1975-2023.xls",
-    "Education": "./data/education/fr-en-etablissements-fermes.csv",
-    "Santé": "./data/sante/valeurs_annuelles.csv",
-    "Securité": "./data/securite/tableaux-4001-ts.xlsx",
-    "technologie": "./data/technologie/technologie_pib_france_1990_2023.csv",
-    "Socio-economique": "./data/socio-economie/PIB 1990 - 2021.xlsx",
-    "Socio-economique_2022": "./data/socio-economie/PIB par Région en 2022.csv",
-    "Politique": "./data/politique/vote_presidentiel_par_dept_1965_2022.csv",
+    "Environnemental": "./data/origine/environnemental/parc-regional-annuel-prod-eolien-solaire.csv",
+    "Demographie": "./data/origine/demographie/estim-pop-dep-sexe-gca-1975-2023.xls",
+    "Education": "./data/origine/education/fr-en-etablissements-fermes.csv",
+    "Santé": "./data/origine/sante/valeurs_annuelles.csv",
+    "Securité": "./data/origine/securite/tableaux-4001-ts.xlsx",
+    "technologie": "./data/origine/technologie/technologie_pib_france_1990_2023.csv",
+    "Socio-economique": "./data/origine/socio-economie/PIB 1990 - 2021.xlsx",
+    "Socio-economique_2022": "./data/origine/socio-economie/PIB par Région en 2022.csv",
+    "Politique": "./data/origine/politique/vote_presidentiel_par_dept_1965_2022.csv",
 }
 
 # Fonction pour lire les fichiers selon leur type
