@@ -63,7 +63,7 @@ def read_file(file_path, max_rows=5000):
         else:
             # Pour les fichiers CSV et autres formats
             print(f"Lecture du fichier CSV: {file_path}")
-            return pd.read_csv(file_path, nrows=max_rows)
+            return pd.read_csv(file_path, nrows=max_rows, sep=';')  # Utiliser ; comme délimiteur
             
     except Exception as e:
         print(f"⚠️ Erreur lors de la lecture du fichier: {str(e)}")
