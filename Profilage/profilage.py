@@ -21,7 +21,7 @@ data_files = {
 def read_file(file_path, max_rows=5000):
     """
     Lit différents types de fichiers et retourne un DataFrame pandas
-    Limite le nombre de lignes pour éviter les problèmes de mémoire
+    Détecte automatiquement le délimiteur pour les CSV
     """
     file_extension = os.path.splitext(file_path)[1].lower()
     
@@ -30,40 +30,55 @@ def read_file(file_path, max_rows=5000):
             # Pour tous les fichiers Excel
             print(f"Lecture du fichier Excel: {file_path}")
             
-            # Déterminer le moteur à utiliser
+            # Code existant pour Excel...
             engine = 'xlrd' if file_extension == '.xls' else 'openpyxl'
-            
-            # Obtenir la liste des feuilles
             xls = pd.ExcelFile(file_path, engine=engine)
             sheet_names = xls.sheet_names
             print(f"Feuilles disponibles: {sheet_names}")
             
-            # Lire une feuille qui est susceptible de contenir des données
-            # La première feuille peut souvent être une notice ou une introduction
+            # Le reste du code Excel reste inchangé...
             sheet_to_use = None
-            
-            # D'abord, essayer de trouver une feuille de données (souvent numérique)
             for sheet in sheet_names:
                 if any(str(year) in sheet for year in range(1900, 2100)):
                     sheet_to_use = sheet
                     break
             
-            # Si aucune feuille avec année trouvée, prendre la deuxième feuille si disponible
             if sheet_to_use is None and len(sheet_names) > 1:
                 sheet_to_use = sheet_names[1]
             else:
-                # Sinon, prendre la première
                 sheet_to_use = sheet_names[0]
             
             print(f"Lecture de la feuille: {sheet_to_use}")
-            
-            # Lire seulement un sous-ensemble des données
             return pd.read_excel(file_path, engine=engine, sheet_name=sheet_to_use, nrows=max_rows)
                 
         else:
-            # Pour les fichiers CSV et autres formats
+            # Pour les fichiers CSV - AVEC DÉTECTION DU DÉLIMITEUR
             print(f"Lecture du fichier CSV: {file_path}")
-            return pd.read_csv(file_path, nrows=max_rows, sep=';')  # Utiliser ; comme délimiteur
+            
+            # Lire quelques lignes pour détecter le délimiteur
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                sample = f.readline() + f.readline()
+            
+            # Compter les occurrences des délimiteurs potentiels
+            semicolons = sample.count(';')
+            commas = sample.count(',')
+            
+            # Détecter le délimiteur le plus probable
+            if semicolons > commas:
+                delimiter = ';'
+            else:
+                delimiter = ','
+                
+            print(f"Délimiteur détecté: '{delimiter}'")
+            
+            # Essayer avec le délimiteur détecté
+            try:
+                return pd.read_csv(file_path, nrows=max_rows, sep=delimiter)
+            except:
+                # En cas d'échec, essayer avec l'autre délimiteur
+                other_delimiter = ',' if delimiter == ';' else ';'
+                print(f"Échec avec '{delimiter}', essai avec '{other_delimiter}'")
+                return pd.read_csv(file_path, nrows=max_rows, sep=other_delimiter)
             
     except Exception as e:
         print(f"⚠️ Erreur lors de la lecture du fichier: {str(e)}")
