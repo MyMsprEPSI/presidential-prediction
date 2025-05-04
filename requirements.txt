@@ -8,3 +8,7 @@ black
 scikit-learn
 openpyxl
 ipykernel
+numpy
+xlrd
+findspark
+pyarrow

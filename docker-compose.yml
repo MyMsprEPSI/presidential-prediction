@@ -36,16 +36,23 @@ services:
   ###
   ### APP PYTHON - ETL PREDICT
   ###
-  # app-etl:
-  #   container_name: "prediction-presidential-etl"
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.etl
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - mysql
-  #   networks:
-  #     - "prediction-presidential-network"
+  app-etl:
+    container_name: "prediction-presidential-etl"
+    build:
+      context: .
+      dockerfile: Dockerfile.etl
+    restart: on-failure
+    depends_on:
+      - mysql
+    volumes:
+      - ./data:/app/data
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: elections_presidentielles
+    networks:
+      - "prediction-presidential-network"
 
   ###
   ### APP PYTHON - MACHINE LEARNING
@@ -68,3 +75,4 @@ networks:
 
 volumes:
   prediction-presidential-mysql-data:
+    name: "prediction-presidential-mysql-data"

@@ -351,14 +351,16 @@ def load_data_to_mysql(transformed_data, spark, db_config=None):
     """
     logger.info("🚀 Chargement des données dans MySQL")
     
-    # Configuration de connexion par défaut si non fournie
+    # Utiliser les variables d'environnement si disponibles
+    import os
+    
     if db_config is None:
         db_config = {
-            'host': 'localhost',
-            'user': 'root',
-            'password': '',
-            'database': 'elections_presidentielles',
-            'port': 3306
+            'host': os.environ.get('DB_HOST', 'localhost'),
+            'user': os.environ.get('DB_USER', 'root'),
+            'password': os.environ.get('DB_PASSWORD', ''),
+            'database': os.environ.get('DB_NAME', 'elections_presidentielles'),
+            'port': int(os.environ.get('DB_PORT', '3306'))
         }
     
     loader = DataLoader(spark, "data/processed_data", db_config)

@@ -1,0 +1,54 @@
+# Use Python 3.12 (Bookworm slim) as base
+FROM python:3.12-slim-bookworm
+
+# Recreate APT sources.list with HTTPS to ensure connectivity and proper packages
+RUN printf "deb https://deb.debian.org/debian bookworm main\n" > /etc/apt/sources.list \
+ && printf "deb https://deb.debian.org/debian bookworm-updates main\n" >> /etc/apt/sources.list \
+ && printf "deb https://deb.debian.org/debian-security bookworm-security main\n" >> /etc/apt/sources.list
+
+# Install dependencies and add Eclipse Temurin (Adoptium) for JDK 20
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    wget \
+    gnupg \
+    apt-transport-https \
+    ca-certificates \
+ && mkdir -p /etc/apt/keyrings \
+ && wget -qO /etc/apt/keyrings/adoptium.asc https://packages.adoptium.net/artifactory/api/gpg/key/public \
+ && echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb $(. /etc/os-release; echo $VERSION_CODENAME) main" \
+      > /etc/apt/sources.list.d/adoptium.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+    temurin-20-jdk \
+ && rm -rf /var/lib/apt/lists/*
+
+# Configure Java environment
+ENV JAVA_HOME=/usr/lib/jvm/temurin-20-jdk-amd64
+ENV PATH="$JAVA_HOME/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
+WORKDIR /app
+
+# Copier les fichiers requirements
+COPY requirements.txt .
+# Installer les dépendances Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copier le code source
+COPY data/ ./data/
+COPY database/ ./database/
+COPY etl/ ./etl/
+COPY main.py .
+# COPY profilage/ ./profilage/
+
+# Créer un utilisateur non-root pour plus de sécurité
+RUN groupadd -r etluser && useradd -r -g etluser etluser
+RUN chown -R etluser:etluser /app
+USER etluser
+
+# Port PySpark UI
+EXPOSE 4040
+
+# Commande par défaut
+CMD ["python", "main.py"]
