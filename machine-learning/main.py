@@ -462,24 +462,22 @@ def train_models(df_electoral, df_non_electoral, selected_years=None):
         "- Techniques spéciales pour gérer le déséquilibre des classes"
     ]
 
-    # Sélection du meilleur modèle pour les prédictions hors années électorales
+# Sélection du meilleur modèle pour les prédictions hors années électorales
     best_model = None
     for name, model in models.items():
         if name == best["name"]:
             best_model = model
             break
     
-    # Si un meilleur modèle a été trouvé, faire des prédictions sur les années non électorales
-    if best_model:
+    # Si un meilleur modèle a été trouvé, faire des prédictions sur les années non électorales UNIQUEMENT si selected_years est spécifié
+    if best_model and selected_years is not None:
         # Construction de la phrase en fonction des années sélectionnées
-        if selected_years:
-            years_str = ", ".join(map(str, selected_years))
-            if len(selected_years) == 1:
-                print(f"🔮 Application du modèle {best['name']} à l'année {years_str}...")
-            else:
-                print(f"🔮 Application du modèle {best['name']} aux années {years_str}...")
+        years_str = ", ".join(map(str, selected_years))
+        if len(selected_years) == 1:
+            print(f"🔮 Application du modèle {best['name']} à l'année {years_str}...")
         else:
-            print(f"🔮 Application du modèle {best['name']} aux années sans présidentielle...")
+            print(f"🔮 Application du modèle {best['name']} aux années {years_str}...")
+
         
         # Vérifier que nous avons des données non-électorales
         if not df_non_electoral.empty:
@@ -490,15 +488,15 @@ def train_models(df_electoral, df_non_electoral, selected_years=None):
                 if '_' in year_dept
             ]))
             
-            if selected_years:
-                filtered_years = [y for y in non_electoral_years if y in selected_years]
-                if filtered_years:
-                    non_electoral_years = filtered_years
-                    print(f"📊 Prédiction limitée aux années sélectionnées: {non_electoral_years}")
-                else:
-                    print(f"⚠️ Aucune année sélectionnée ({selected_years}) ne figure dans les données disponibles: {non_electoral_years}")
+            # Filtrer pour ne garder que les années sélectionnées
+            filtered_years = [y for y in non_electoral_years if y in selected_years]
+            if filtered_years:
+                non_electoral_years = filtered_years
+                print(f"📊 Prédiction limitée aux années sélectionnées: {non_electoral_years}")
             else:
-                print(f"📊 Années non-électorales disponibles: {non_electoral_years}")
+                print(f"⚠️ Aucune année sélectionnée ({selected_years}) ne figure dans les données disponibles: {non_electoral_years}")
+                # Si aucune année sélectionnée n'est disponible, ne pas continuer avec les prédictions
+                non_electoral_years = []
             
             # Dictionnaire pour stocker les prédictions par année
             predictions_by_year = {}
@@ -529,60 +527,75 @@ def train_models(df_electoral, df_non_electoral, selected_years=None):
                     print(f"✅ Prédictions effectuées pour l'année {year}")
             
             
-            # Maintenant, générer le rapport Markdown avec les résultats par année
-            if selected_years:
+            # Maintenant, générer le rapport Markdown avec les résultats par année seulement si nous avons des prédictions
+            if non_electoral_years and predictions_by_year:
                 if len(selected_years) == 1:
                     md_lines.append(f"\n## 🧪 Prédiction sur l'année {selected_years[0]}\n")
                 else:
                     md_lines.append(f"\n## 🧪 Prédictions sur les années sélectionnées\n")
                     # Ajouter une liste des années sélectionnées
                     md_lines.append("Années prédites:\n")
-                    for year in selected_years:
-                        md_lines.append(f"- **{year}**\n")
+                    for year in sorted(selected_years):
+                        if year in predictions_by_year:
+                            md_lines.append(f"- **{year}** ✅\n")
+                        else:
+                            md_lines.append(f"- **{year}** ⚠️ (pas de données)\n")
                     md_lines.append("\n")
+                
+                # Pour chaque année, calculer les statistiques des prédictions
+                for year in sorted(non_electoral_years):
+                    if year in predictions_by_year:
+                        year_data = predictions_by_year[year]
+                        counts = Counter(year_data["predicted"])
+                        
+                        if counts:
+                            # Trouver le parti le plus fréquemment prédit
+                            label, cnt = counts.most_common(1)[0]
+                            pct = cnt / len(year_data) * 100
+                            party = PARTY_LABELS.get(int(label), "Inconnu")
+                            
+                            md_lines.append(f"### Année {year}\n")
+                            md_lines.append(f"- **Parti majoritaire** : `{party}` (ID {label})\n")
+                            md_lines.append(f"- **Pourcentage** : {pct:.1f}%\n")
+                            md_lines.append(f"- **Nombre de départements** : {len(year_data)}\n\n")
+                            
+                            # Répartition détaillée par parti politique
+                            md_lines.append("#### Répartition par parti\n")
+                            for pred_id, count in counts.most_common():
+                                pred_party = PARTY_LABELS.get(int(pred_id), "Inconnu")
+                                pred_pct = count / len(year_data) * 100
+                                md_lines.append(f"- {pred_party} (ID {pred_id}): {count} dép. ({pred_pct:.1f}%)\n")
+                            
+                            md_lines.append("\n")
+                
+                print(f"✅ Prédictions effectuées pour {sum(len(data) for data in predictions_by_year.values())} observations de {len(predictions_by_year)} années non-électorales")
             else:
-                md_lines.append("\n## 🧪 Prédictions sur années sans présidentielle\n")
-            
-            # Pour chaque année, calculer les statistiques des prédictions
-            for year in non_electoral_years:
-                if year in predictions_by_year:
-                    year_data = predictions_by_year[year]
-                    counts = Counter(year_data["predicted"])
-                    
-                    if counts:
-                        # Trouver le parti le plus fréquemment prédit
-                        label, cnt = counts.most_common(1)[0]
-                        pct = cnt / len(year_data) * 100
-                        party = PARTY_LABELS.get(int(label), "Inconnu")
-                        
-                        md_lines.append(f"### Année {year}\n")
-                        md_lines.append(f"- **Parti majoritaire** : `{party}` (ID {label})\n")
-                        md_lines.append(f"- **Pourcentage** : {pct:.1f}%\n")
-                        md_lines.append(f"- **Nombre de départements** : {len(year_data)}\n\n")
-                        
-                        # Répartition détaillée par parti politique
-                        md_lines.append("#### Répartition par parti\n")
-                        for pred_id, count in counts.most_common():
-                            pred_party = PARTY_LABELS.get(int(pred_id), "Inconnu")
-                            pred_pct = count / len(year_data) * 100
-                            md_lines.append(f"- {pred_party} (ID {pred_id}): {count} dép. ({pred_pct:.1f}%)\n")
-                        
-                        md_lines.append("\n")
-            
-            print(f"✅ Prédictions effectuées pour {len(df_non_electoral)} observations de {len(non_electoral_years)} années non-électorales")
+                print("⚠️ Aucune prédiction n'a pu être générée pour les années sélectionnées")
         else:
             print("⚠️ Pas de données disponibles pour les années non électorales")
+    else:
+        # Si selected_years n'est pas spécifié ou aucun modèle trouvé
+        if not best_model:
+            print("❌ Aucun modèle n'a pu être sélectionné pour les prédictions")
+        else:
+            print("ℹ️ Aucune année spécifiée pour les prédictions. Utilisez l'option -p pour sélectionner des années.")
 
     # Enregistrement du fichier Markdown avec horodatage dans le nom du fichier
     now = datetime.now()
     file_timestamp = now.strftime("%d-%m-%Y_%Hh%M")
     
     # Si des années spécifiques ont été prédites, les inclure dans le nom de fichier
-    if selected_years:
-        year_str = "_".join(map(str, selected_years))
-        result_filename = f"result_predict_{year_str}_{file_timestamp}.md"
+    if selected_years and predictions_by_year:
+        years_predicted = sorted(predictions_by_year.keys())
+        if years_predicted:
+            year_str = "_".join(map(str, years_predicted))
+            result_filename = f"result_predict_{year_str}_{file_timestamp}.md"
+        else:
+            # Aucune prédiction réelle malgré les années demandées
+            result_filename = f"result_models_{file_timestamp}.md"
     else:
-        result_filename = f"result_predict_{file_timestamp}.md"
+        # Pas d'années sélectionnées = uniquement résultats des modèles
+        result_filename = f"result_models_{file_timestamp}.md"
     
     with open(result_filename, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines))
