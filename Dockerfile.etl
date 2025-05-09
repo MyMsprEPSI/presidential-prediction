@@ -13,6 +13,7 @@ RUN apt-get update \
     gnupg \
     apt-transport-https \
     ca-certificates \
+    procps \
  && mkdir -p /etc/apt/keyrings \
  && wget -qO /etc/apt/keyrings/adoptium.asc https://packages.adoptium.net/artifactory/api/gpg/key/public \
  && echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb $(. /etc/os-release; echo $VERSION_CODENAME) main" \
@@ -40,11 +41,14 @@ COPY data/ ./data/
 COPY database/ ./database/
 COPY etl/ ./etl/
 COPY main.py .
-# COPY profilage/ ./profilage/
+
 
 # Créer un utilisateur non-root pour plus de sécurité
 RUN groupadd -r etluser && useradd -r -g etluser etluser
 RUN chown -R etluser:etluser /app
+RUN mkdir -p /home/etluser/.ivy2 && \
+    chown -R etluser:etluser /home/etluser/.ivy2
+
 USER etluser
 
 # Port PySpark UI

@@ -1,9 +1,18 @@
 # main.py
 
 import logging
+import os
+
 from etl.extract import DataExtractor
 from etl.transform import DataTransformer
 from etl.loader import DataLoader
+
+# Import de la librairie dotenv pour charger les variables d'environnement
+from dotenv import load_dotenv
+
+# Chargement des variables d'environnement
+load_dotenv()
+
 
 # Configuration du logger
 logging.basicConfig(
@@ -351,16 +360,14 @@ def load_data_to_mysql(transformed_data, spark, db_config=None):
     """
     logger.info("🚀 Chargement des données dans MySQL")
     
-    # Utiliser les variables d'environnement si disponibles
-    import os
     
     if db_config is None:
         db_config = {
-            'host': os.environ.get('DB_HOST', 'localhost'),
-            'user': os.environ.get('DB_USER', 'root'),
-            'password': os.environ.get('DB_PASSWORD', ''),
-            'database': os.environ.get('DB_NAME', 'elections_presidentielles'),
-            'port': int(os.environ.get('DB_PORT', '3306'))
+            'host': os.getenv('DB_HOST', 'localhost'),
+            'user': os.getenv('DB_USER', 'root'),
+            'password': os.getenv('DB_PASSWORD', ''),
+            'database': os.getenv('DB_NAME', 'elections_presidentielles'),
+            'port': int(os.getenv('DB_PORT', '3306'))
         }
     
     loader = DataLoader(spark, "data/processed_data", db_config)
@@ -483,11 +490,11 @@ def main():
         # Chargement des données dans MySQL
         # Spécifiez vos paramètres de connexion MySQL ici
         db_config = {
-            'host': 'localhost',
-            'user': 'root',
-            'password': '',  # Mettez votre mot de passe ici
-            'database': 'elections_presidentielles',
-            'port': 3306
+            'host': os.getenv('DB_HOST'),
+            'user': os.getenv('DB_USER'),
+            'password': os.getenv('DB_PASSWORD'),
+            'database': os.getenv('DB_NAME'),
+            'port': int(os.getenv('DB_PORT'))
         }
         load_data_to_mysql(transformed_data, spark, db_config)
         

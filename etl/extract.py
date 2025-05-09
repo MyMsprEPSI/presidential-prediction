@@ -103,9 +103,12 @@ class DataExtractor:
                 "spark.python.worker.reuse", "true"
             )  # Réutiliser les workers Python
             .config("spark.python.worker.timeout", "1800")  # Augmenter le timeout
+            .config("spark.jars.packages", 
+                    "com.crealytics:spark-excel_2.12:3.5.0_0.20.3,"
+                    "commons-io:commons-io:2.11.0")
             .config(
                 "spark.driver.extraClassPath",
-                "./database/connector/mysql-connector-j-9.1.0.jar;./database/connector/spark-excel_2.12-3.5.0_0.20.3.jar",
+                "./database/connector/mysql-connector-j-9.1.0.jar",
             )
             .config("spark.hadoop.fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
             .config("spark.driver.memory", "8g")

@@ -51,6 +51,7 @@ services:
       DB_USER: root
       DB_PASSWORD: ""
       DB_NAME: elections_presidentielles
+      DB_PORT: 3306
     networks:
       - "prediction-presidential-network"
 
