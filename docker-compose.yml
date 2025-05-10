@@ -44,8 +44,6 @@ services:
     restart: on-failure
     depends_on:
       - mysql
-    volumes:
-      - ./data:/app/data
     environment:
       DB_HOST: mysql
       DB_USER: root
@@ -58,16 +56,22 @@ services:
   ###
   ### APP PYTHON - MACHINE LEARNING
   ###
-  # app-machine-learning:
-  #     container_name: "prediction-presidential-machine-learning"
-  #     build:
-  #         context: .
-  #         dockerfile: Dockerfile.machine-learning
-  #     restart: unless-stopped
-  #     depends_on:
-  #         - mysql
-  #     networks:
-  #         - "prediction-presidential-network"
+  app-machine-learning:
+      container_name: "prediction-presidential-machine-learning"
+      build:
+          context: .
+          dockerfile: Dockerfile.machine-learning
+      restart: unless-stopped
+      depends_on:
+        - mysql
+      environment:
+        DB_HOST: mysql
+        DB_USER: root
+        DB_PASSWORD: ""
+        DB_NAME: elections_presidentielles
+        DB_PORT: 3306
+      networks:
+          - "prediction-presidential-network"
 
 networks:
   prediction-presidential-network:

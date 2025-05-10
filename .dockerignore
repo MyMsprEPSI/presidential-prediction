@@ -17,4 +17,3 @@ htmlcov/
 .egg-info/
 .eggs/
 *.egg
-data/processed_data/*.csv
