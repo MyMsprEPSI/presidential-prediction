@@ -98,7 +98,7 @@ class DataExtractor:
         return (
             SparkSession.builder.appName(app_name)
             .master(master)
-            .config("spark.driver.host", "127.0.0.1")
+            # .config("spark.driver.host", "127.0.0.1")
             .config(
                 "spark.python.worker.reuse", "true"
             )  # Réutiliser les workers Python
