@@ -423,7 +423,7 @@ def load_data_to_mysql(transformed_data, spark, db_config=None):
             'E_20_39_ans': 'pop_20_39',
             'E_40_59_ans': 'pop_40_59',
             'E_60_74_ans': 'pop_60_74',
-            'E_75_et_plus': 'pop_75_plus'
+            'E_75_plus': 'pop_75_plus'
         },
         'education': {
             'annee_fermeture': 'annee_fermeture',

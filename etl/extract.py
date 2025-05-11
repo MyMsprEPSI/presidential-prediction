@@ -614,11 +614,12 @@ class DataExtractor:
             logger.error(traceback.format_exc())
             return None
 
+
     def extract_demography_data(self, file_xls, file_xlsx, file_csv):
         """
-        Convertit le fichier XLS de démographie en XLSX, fusionne les feuilles en un CSV,
-        puis charge les données dans un DataFrame Spark.
-        Cette méthode reprend le code de conversion et d'extraction présent dans transform_demoV2.
+        1) Conversion du XLS en XLSX si nécessaire
+        2) Fusion des feuilles en un CSV
+        3) Chargement en Spark sans header, renommage explicite des colonnes
         """
         # --- Conversion XLS -> XLSX ---
         if not os.path.exists(file_xlsx):
@@ -626,8 +627,8 @@ class DataExtractor:
             try:
                 excel_data = pd.read_excel(file_xls, sheet_name=None)
                 with pd.ExcelWriter(file_xlsx, engine="openpyxl") as writer:
-                    for sheet, data in excel_data.items():
-                        data.to_excel(writer, sheet_name=sheet, index=False)
+                    for sheet, df in excel_data.items():
+                        df.to_excel(writer, sheet_name=sheet, index=False)
                 print(f"✅ Conversion réussie : {file_xlsx}")
             except Exception as e:
                 print(f"❌ Erreur lors de la conversion : {e}")
@@ -638,8 +639,13 @@ class DataExtractor:
         if not os.path.exists(file_csv):
             print("📥 Extraction et fusion des feuilles Excel...")
             try:
-                df_final = self._extract_and_combine_demo_sheets(file_xlsx)
-                # Sauvegarder en CSV avec le séparateur point-virgule
+                # lit toutes les feuilles, ajoute une colonne 'Année' = nom de feuille
+                all_sheets = pd.read_excel(file_xlsx, sheet_name=None)
+                df_list = []
+                for sheet_name, df in all_sheets.items():
+                    df["Année"] = int(sheet_name)
+                    df_list.append(df)
+                df_final = pd.concat(df_list, ignore_index=True)
                 df_final.to_csv(file_csv, index=False, sep=";")
                 print(f"✅ Fichier CSV généré : {file_csv}")
             except Exception as e:
@@ -647,8 +653,27 @@ class DataExtractor:
         else:
             print(f"✓ {file_csv} existe déjà. Extraction ignorée.")
 
-        # --- Chargement du CSV avec Spark ---
-        return self.spark.read.option("header", True).option("sep", ";").csv(file_csv)
+        # --- Chargement du CSV avec Spark sans header pour renommer proprement ---
+        raw = self.spark.read \
+            .option("header", False) \
+            .option("sep", ";") \
+            .csv(file_csv)
+
+        # Filtrer la ligne d'en-tête répétée (où la 3ᵉ colonne vaut '0 à 19 ans')
+        clean = raw.filter(raw._c2 != '0 Ã  19 ans')
+
+        # Nouveau schéma de colonnes, dans l'ordre exact
+        new_cols = [
+            "Code_Département", "Nom_Département",
+            "E_0_19_ans", "E_20_39_ans", "E_40_59_ans", "E_60_74_ans", "E_75_plus", "E_Total",
+            "H_0_19_ans", "H_20_39_ans", "H_40_59_ans", "H_60_74_ans", "H_75_plus", "H_Total",
+            "F_0_19_ans", "F_20_39_ans", "F_40_59_ans", "F_60_74_ans", "F_75_plus", "F_Total",
+            "Année"
+        ]
+
+        # Appliquer les nouveaux noms
+        df_spark = clean.toDF(*new_cols)
+        return df_spark
 
     def extract_orientation_politique(self, file_path):
         """
