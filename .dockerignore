@@ -1,0 +1,19 @@
+# These files and folders are not taken into account
+assets/
+docs/
+powerbi/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.egg-info/
+.eggs/
+*.egg

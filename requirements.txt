@@ -1,0 +1,14 @@
+mysql-connector-python
+py4j
+pyspark
+python-dotenv
+setuptools
+pandas
+black
+scikit-learn
+openpyxl
+ipykernel
+numpy
+xlrd
+findspark
+pyarrow

@@ -1,0 +1,22 @@
+{
+    "name": "Presidential Prediction",
+    "dataColors": [
+      "#C0392B",
+      "#3E5C76",
+      "#1B2A41",
+      "#D6E6F2",
+      "#BDC3C7"
+    ],
+    "background": "#F4F4F4",
+    "foreground": "#1B2A41",
+    "tableAccent": "#C0392B",
+    "visualStyles": {
+      "*": {
+        "*": {
+          "color": [{ "solid": { "color": "#1B2A41" } }],
+          "fontSize": "12pt"
+        }
+      }
+    }
+  }
+  

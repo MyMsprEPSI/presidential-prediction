@@ -1,0 +1,714 @@
+﻿COD_VAR;LIB_VAR;COD_MOD;LIB_MOD;TYPE_VAR;LONG_VAR
+AN_RECENS;Année du recensement de population;1968;Recensement de 1968;CHAR;4
+AN_RECENS;Année du recensement de population;1975;Recensement de 1975;CHAR;4
+AN_RECENS;Année du recensement de population;1982;Recensement de 1982;CHAR;4
+AN_RECENS;Année du recensement de population;1990;Recensement de 1990;CHAR;4
+AN_RECENS;Année du recensement de population;1999;Recensement de 1999;CHAR;4
+AN_RECENS;Année du recensement de population;2009;Recensement de 2009;CHAR;4
+AN_RECENS;Année du recensement de population;2014;Recensement de 2014;CHAR;4
+AN_RECENS;Année du recensement de population;2020;Recensement de 2020;CHAR;4
+DEP_RES_22;Département de résidence (en géographie 2022);01;Ain;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);02;Aisne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);03;Allier;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);04;Alpes-de-Haute-Provence;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);05;Hautes-Alpes;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);06;Alpes-Maritimes;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);07;Ardèche;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);08;Ardennes;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);09;Ariège;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);10;Aube;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);11;Aude;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);12;Aveyron;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);13;Bouches-du-Rhône;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);14;Calvados;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);15;Cantal;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);16;Charente;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);17;Charente-Maritime;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);18;Cher;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);19;Corrèze;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);21;Côte-d'Or;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);22;Côtes-d'Armor;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);23;Creuse;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);24;Dordogne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);25;Doubs;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);26;Drôme;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);27;Eure;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);28;Eure-et-Loir;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);29;Finistère;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);2A;Corse-du-Sud;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);2B;Haute-Corse;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);30;Gard;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);31;Haute-Garonne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);32;Gers;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);33;Gironde;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);34;Hérault;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);35;Ille-et-Vilaine;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);36;Indre;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);37;Indre-et-Loire;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);38;Isère;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);39;Jura;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);40;Landes;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);41;Loir-et-Cher;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);42;Loire;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);43;Haute-Loire;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);44;Loire-Atlantique;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);45;Loiret;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);46;Lot;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);47;Lot-et-Garonne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);48;Lozère;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);49;Maine-et-Loire;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);50;Manche;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);51;Marne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);52;Haute-Marne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);53;Mayenne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);54;Meurthe-et-Moselle;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);55;Meuse;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);56;Morbihan;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);57;Moselle;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);58;Nièvre;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);59;Nord;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);60;Oise;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);61;Orne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);62;Pas-de-Calais;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);63;Puy-de-Dôme;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);64;Pyrénées-Atlantiques;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);65;Hautes-Pyrénées;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);66;Pyrénées-Orientales;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);67;Bas-Rhin;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);68;Haut-Rhin;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);69;Rhône;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);70;Haute-Saône;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);71;Saône-et-Loire;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);72;Sarthe;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);73;Savoie;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);74;Haute-Savoie;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);75;Paris;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);76;Seine-Maritime;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);77;Seine-et-Marne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);78;Yvelines;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);79;Deux-Sèvres;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);80;Somme;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);81;Tarn;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);82;Tarn-et-Garonne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);83;Var;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);84;Vaucluse;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);85;Vendée;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);86;Vienne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);87;Haute-Vienne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);88;Vosges;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);89;Yonne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);90;Territoire de Belfort;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);91;Essonne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);92;Hauts-de-Seine;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);93;Seine-Saint-Denis;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);94;Val-de-Marne;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);95;Val-d'Oise;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);971;Guadeloupe;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);972;Martinique;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);973;Guyane;CHAR;3
+DEP_RES_22;Département de résidence (en géographie 2022);974;La Réunion;CHAR;3
+DEP_NAIS;Département de naissance;01;Ain;CHAR;3
+DEP_NAIS;Département de naissance;02;Aisne;CHAR;3
+DEP_NAIS;Département de naissance;03;Allier;CHAR;3
+DEP_NAIS;Département de naissance;04;Alpes-de-Haute-Provence;CHAR;3
+DEP_NAIS;Département de naissance;05;Hautes-Alpes;CHAR;3
+DEP_NAIS;Département de naissance;06;Alpes-Maritimes;CHAR;3
+DEP_NAIS;Département de naissance;07;Ardèche;CHAR;3
+DEP_NAIS;Département de naissance;08;Ardennes;CHAR;3
+DEP_NAIS;Département de naissance;09;Ariège;CHAR;3
+DEP_NAIS;Département de naissance;10;Aube;CHAR;3
+DEP_NAIS;Département de naissance;11;Aude;CHAR;3
+DEP_NAIS;Département de naissance;12;Aveyron;CHAR;3
+DEP_NAIS;Département de naissance;13;Bouches-du-Rhône;CHAR;3
+DEP_NAIS;Département de naissance;14;Calvados;CHAR;3
+DEP_NAIS;Département de naissance;15;Cantal;CHAR;3
+DEP_NAIS;Département de naissance;16;Charente;CHAR;3
+DEP_NAIS;Département de naissance;17;Charente-Maritime;CHAR;3
+DEP_NAIS;Département de naissance;18;Cher;CHAR;3
+DEP_NAIS;Département de naissance;19;Corrèze;CHAR;3
+DEP_NAIS;Département de naissance;20;Corse;CHAR;3
+DEP_NAIS;Département de naissance;21;Côte-d'Or;CHAR;3
+DEP_NAIS;Département de naissance;22;Côtes-d'Armor;CHAR;3
+DEP_NAIS;Département de naissance;23;Creuse;CHAR;3
+DEP_NAIS;Département de naissance;24;Dordogne;CHAR;3
+DEP_NAIS;Département de naissance;25;Doubs;CHAR;3
+DEP_NAIS;Département de naissance;26;Drôme;CHAR;3
+DEP_NAIS;Département de naissance;27;Eure;CHAR;3
+DEP_NAIS;Département de naissance;28;Eure-et-Loir;CHAR;3
+DEP_NAIS;Département de naissance;29;Finistère;CHAR;3
+DEP_NAIS;Département de naissance;2A;Corse-du-Sud;CHAR;3
+DEP_NAIS;Département de naissance;2B;Haute-Corse;CHAR;3
+DEP_NAIS;Département de naissance;30;Gard;CHAR;3
+DEP_NAIS;Département de naissance;31;Haute-Garonne;CHAR;3
+DEP_NAIS;Département de naissance;32;Gers;CHAR;3
+DEP_NAIS;Département de naissance;33;Gironde;CHAR;3
+DEP_NAIS;Département de naissance;34;Hérault;CHAR;3
+DEP_NAIS;Département de naissance;35;Ille-et-Vilaine;CHAR;3
+DEP_NAIS;Département de naissance;36;Indre;CHAR;3
+DEP_NAIS;Département de naissance;37;Indre-et-Loire;CHAR;3
+DEP_NAIS;Département de naissance;38;Isère;CHAR;3
+DEP_NAIS;Département de naissance;39;Jura;CHAR;3
+DEP_NAIS;Département de naissance;40;Landes;CHAR;3
+DEP_NAIS;Département de naissance;41;Loir-et-Cher;CHAR;3
+DEP_NAIS;Département de naissance;42;Loire;CHAR;3
+DEP_NAIS;Département de naissance;43;Haute-Loire;CHAR;3
+DEP_NAIS;Département de naissance;44;Loire-Atlantique;CHAR;3
+DEP_NAIS;Département de naissance;45;Loiret;CHAR;3
+DEP_NAIS;Département de naissance;46;Lot;CHAR;3
+DEP_NAIS;Département de naissance;47;Lot-et-Garonne;CHAR;3
+DEP_NAIS;Département de naissance;48;Lozère;CHAR;3
+DEP_NAIS;Département de naissance;49;Maine-et-Loire;CHAR;3
+DEP_NAIS;Département de naissance;50;Manche;CHAR;3
+DEP_NAIS;Département de naissance;51;Marne;CHAR;3
+DEP_NAIS;Département de naissance;52;Haute-Marne;CHAR;3
+DEP_NAIS;Département de naissance;53;Mayenne;CHAR;3
+DEP_NAIS;Département de naissance;54;Meurthe-et-Moselle;CHAR;3
+DEP_NAIS;Département de naissance;55;Meuse;CHAR;3
+DEP_NAIS;Département de naissance;56;Morbihan;CHAR;3
+DEP_NAIS;Département de naissance;57;Moselle;CHAR;3
+DEP_NAIS;Département de naissance;58;Nièvre;CHAR;3
+DEP_NAIS;Département de naissance;59;Nord;CHAR;3
+DEP_NAIS;Département de naissance;60;Oise;CHAR;3
+DEP_NAIS;Département de naissance;61;Orne;CHAR;3
+DEP_NAIS;Département de naissance;62;Pas-de-Calais;CHAR;3
+DEP_NAIS;Département de naissance;63;Puy-de-Dôme;CHAR;3
+DEP_NAIS;Département de naissance;64;Pyrénées-Atlantiques;CHAR;3
+DEP_NAIS;Département de naissance;65;Hautes-Pyrénées;CHAR;3
+DEP_NAIS;Département de naissance;66;Pyrénées-Orientales;CHAR;3
+DEP_NAIS;Département de naissance;67;Bas-Rhin;CHAR;3
+DEP_NAIS;Département de naissance;68;Haut-Rhin;CHAR;3
+DEP_NAIS;Département de naissance;69;Rhône;CHAR;3
+DEP_NAIS;Département de naissance;70;Haute-Saône;CHAR;3
+DEP_NAIS;Département de naissance;71;Saône-et-Loire;CHAR;3
+DEP_NAIS;Département de naissance;72;Sarthe;CHAR;3
+DEP_NAIS;Département de naissance;73;Savoie;CHAR;3
+DEP_NAIS;Département de naissance;74;Haute-Savoie;CHAR;3
+DEP_NAIS;Département de naissance;75;Paris;CHAR;3
+DEP_NAIS;Département de naissance;76;Seine-Maritime;CHAR;3
+DEP_NAIS;Département de naissance;77;Seine-et-Marne;CHAR;3
+DEP_NAIS;Département de naissance;78;Yvelines;CHAR;3
+DEP_NAIS;Département de naissance;79;Deux-Sèvres;CHAR;3
+DEP_NAIS;Département de naissance;80;Somme;CHAR;3
+DEP_NAIS;Département de naissance;81;Tarn;CHAR;3
+DEP_NAIS;Département de naissance;82;Tarn-et-Garonne;CHAR;3
+DEP_NAIS;Département de naissance;83;Var;CHAR;3
+DEP_NAIS;Département de naissance;84;Vaucluse;CHAR;3
+DEP_NAIS;Département de naissance;85;Vendée;CHAR;3
+DEP_NAIS;Département de naissance;86;Vienne;CHAR;3
+DEP_NAIS;Département de naissance;87;Haute-Vienne;CHAR;3
+DEP_NAIS;Département de naissance;88;Vosges;CHAR;3
+DEP_NAIS;Département de naissance;89;Yonne;CHAR;3
+DEP_NAIS;Département de naissance;90;Territoire de Belfort;CHAR;3
+DEP_NAIS;Département de naissance;91;Essonne;CHAR;3
+DEP_NAIS;Département de naissance;92;Hauts-de-Seine;CHAR;3
+DEP_NAIS;Département de naissance;93;Seine-Saint-Denis;CHAR;3
+DEP_NAIS;Département de naissance;94;Val-de-Marne;CHAR;3
+DEP_NAIS;Département de naissance;95;Val-d'Oise;CHAR;3
+DEP_NAIS;Département de naissance;971;Guadeloupe;CHAR;3
+DEP_NAIS;Département de naissance;972;Martinique;CHAR;3
+DEP_NAIS;Département de naissance;973;Guyane;CHAR;3
+DEP_NAIS;Département de naissance;974;La Réunion;CHAR;3
+DEP_NAIS;Département de naissance;975;Saint-Pierre-et-Miquelon;CHAR;3
+DEP_NAIS;Département de naissance;976;Mayotte;CHAR;3
+DEP_NAIS;Département de naissance;977;Saint-Barthélemy;CHAR;3
+DEP_NAIS;Département de naissance;978;Saint-Martin;CHAR;3
+DEP_NAIS;Département de naissance;97X;Comores y.c Mayotte et Terres australes;CHAR;3
+DEP_NAIS;Département de naissance;9Y;Pacifique (Polynésie Française- Nouvelle-Calédonie- Wallis-et- Futuna- Ile de Clipperton);CHAR;3
+DEP_NAIS;Département de naissance;99;Etranger et autres COM;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);01;Ain;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);02;Aisne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);03;Allier;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);04;Alpes-de-Haute-Provence;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);05;Hautes-Alpes;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);06;Alpes-Maritimes;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);07;Ardèche;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);08;Ardennes;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);09;Ariège;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);10;Aube;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);11;Aude;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);12;Aveyron;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);13;Bouches-du-Rhône;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);14;Calvados;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);15;Cantal;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);16;Charente;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);17;Charente-Maritime;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);18;Cher;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);19;Corrèze;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);21;Côte-d'Or;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);22;Côtes-d'Armor;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);23;Creuse;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);24;Dordogne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);25;Doubs;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);26;Drôme;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);27;Eure;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);28;Eure-et-Loir;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);29;Finistère;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);2A;Corse-du-Sud;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);2B;Haute-Corse;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);30;Gard;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);31;Haute-Garonne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);32;Gers;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);33;Gironde;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);34;Hérault;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);35;Ille-et-Vilaine;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);36;Indre;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);37;Indre-et-Loire;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);38;Isère;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);39;Jura;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);40;Landes;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);41;Loir-et-Cher;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);42;Loire;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);43;Haute-Loire;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);44;Loire-Atlantique;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);45;Loiret;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);46;Lot;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);47;Lot-et-Garonne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);48;Lozère;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);49;Maine-et-Loire;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);50;Manche;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);51;Marne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);52;Haute-Marne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);53;Mayenne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);54;Meurthe-et-Moselle;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);55;Meuse;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);56;Morbihan;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);57;Moselle;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);58;Nièvre;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);59;Nord;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);60;Oise;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);61;Orne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);62;Pas-de-Calais;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);63;Puy-de-Dôme;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);64;Pyrénées-Atlantiques;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);65;Hautes-Pyrénées;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);66;Pyrénées-Orientales;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);67;Bas-Rhin;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);68;Haut-Rhin;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);69;Rhône;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);70;Haute-Saône;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);71;Saône-et-Loire;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);72;Sarthe;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);73;Savoie;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);74;Haute-Savoie;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);75;Paris;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);76;Seine-Maritime;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);77;Seine-et-Marne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);78;Yvelines;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);79;Deux-Sèvres;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);80;Somme;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);81;Tarn;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);82;Tarn-et-Garonne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);83;Var;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);84;Vaucluse;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);85;Vendée;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);86;Vienne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);87;Haute-Vienne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);88;Vosges;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);89;Yonne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);90;Territoire de Belfort;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);91;Essonne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);92;Hauts-de-Seine;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);93;Seine-Saint-Denis;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);94;Val-de-Marne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);95;Val-d'Oise;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);971;Guadeloupe;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);972;Martinique;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);973;Guyane;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);974;La Réunion;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);975;Saint-Pierre-et-Miquelon;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);977;Saint-Barthélemy;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);978;Saint-Martin;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);AL;Allemagne;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);BE;Belgique;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);ES;Espagne et Andorre;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);GB;Royaume Uni;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);IT;Italie;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);LU;Luxembourg;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);MO;Monaco;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);CH;Suisse;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);99;Autre cas;CHAR;3
+DEP_TRA_22;Département de travail (en géographie 2022);***;Sans emploi (inactifs- anciens actifs- militaires du contingent- élèves- étudiants- personnes de moins de 14 ans- chômeurs);CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);01;Ain;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);02;Aisne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);03;Allier;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);04;Alpes-de-Haute-Provence;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);05;Hautes-Alpes;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);06;Alpes-Maritimes;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);07;Ardèche;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);08;Ardennes;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);09;Ariège;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);10;Aube;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);11;Aude;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);12;Aveyron;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);13;Bouches-du-Rhône;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);14;Calvados;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);15;Cantal;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);16;Charente;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);17;Charente-Maritime;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);18;Cher;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);19;Corrèze;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);21;Côte-d'Or;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);22;Côtes-d'Armor;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);23;Creuse;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);24;Dordogne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);25;Doubs;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);26;Drôme;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);27;Eure;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);28;Eure-et-Loir;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);29;Finistère;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);2A;Corse-du-Sud;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);2B;Haute-Corse;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);30;Gard;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);31;Haute-Garonne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);32;Gers;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);33;Gironde;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);34;Hérault;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);35;Ille-et-Vilaine;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);36;Indre;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);37;Indre-et-Loire;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);38;Isère;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);39;Jura;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);40;Landes;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);41;Loir-et-Cher;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);42;Loire;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);43;Haute-Loire;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);44;Loire-Atlantique;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);45;Loiret;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);46;Lot;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);47;Lot-et-Garonne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);48;Lozère;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);49;Maine-et-Loire;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);50;Manche;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);51;Marne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);52;Haute-Marne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);53;Mayenne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);54;Meurthe-et-Moselle;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);55;Meuse;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);56;Morbihan;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);57;Moselle;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);58;Nièvre;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);59;Nord;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);60;Oise;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);61;Orne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);62;Pas-de-Calais;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);63;Puy-de-Dôme;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);64;Pyrénées-Atlantiques;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);65;Hautes-Pyrénées;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);66;Pyrénées-Orientales;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);67;Bas-Rhin;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);68;Haut-Rhin;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);69;Rhône;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);70;Haute-Saône;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);71;Saône-et-Loire;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);72;Sarthe;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);73;Savoie;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);74;Haute-Savoie;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);75;Paris;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);76;Seine-Maritime;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);77;Seine-et-Marne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);78;Yvelines;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);79;Deux-Sèvres;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);80;Somme;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);81;Tarn;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);82;Tarn-et-Garonne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);83;Var;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);84;Vaucluse;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);85;Vendée;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);86;Vienne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);87;Haute-Vienne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);88;Vosges;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);89;Yonne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);90;Territoire de Belfort;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);91;Essonne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);92;Hauts-de-Seine;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);93;Seine-Saint-Denis;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);94;Val-de-Marne;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);95;Val-d'Oise;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);971;Guadeloupe;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);972;Martinique;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);973;Guyane;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);974;La Réunion;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);975;Saint-Pierre-et-Miquelon;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);976;Mayotte;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);977;Saint-Barthélemy;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);978;Saint-Martin;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);97X;Comores y.c Mayotte et Terres australes;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);9Y;Pacifique (Wallis-et-Futuna- Polynésie Française- Nouvelle- Calédonie- Ile de Clipperton);CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);99;Etranger et autres COM;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);XX;Non disponible;CHAR;3
+DEP_RAN_22;Département de résidence antérieure (en géographie 2022);ZZ;Individu né après le 01/01/N-1;CHAR;3
+REG_RES_22;Région de résidence (en géographie 2022);01;Guadeloupe;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);02;Martinique;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);03;Guyane;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);04;La Réunion;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);11;Île-de-France;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);24;Centre-Val de Loire;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);27;Bourgogne-Franche-Comté;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);28;Normandie;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);32;Hauts-de-France;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);44;Grand Est;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);52;Pays de la Loire;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);53;Bretagne;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);75;Nouvelle-Aquitaine;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);76;Occitanie;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);84;Auvergne-Rhône-Alpes;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);93;Provence-Alpes-Côte d'Azur;CHAR;2
+REG_RES_22;Région de résidence (en géographie 2022);94;Corse;CHAR;2
+REG_NAIS;Région de naissance;01;Guadeloupe;CHAR;2
+REG_NAIS;Région de naissance;02;Martinique;CHAR;2
+REG_NAIS;Région de naissance;03;Guyane;CHAR;2
+REG_NAIS;Région de naissance;04;La Réunion;CHAR;2
+REG_NAIS;Région de naissance;05;Saint-Pierre-et-Miquelon;CHAR;2
+REG_NAIS;Région de naissance;06;Mayotte;CHAR;2
+REG_NAIS;Région de naissance;07;Saint-Barthélemy;CHAR;2
+REG_NAIS;Région de naissance;08;Saint-Martin;CHAR;2
+REG_NAIS;Région de naissance;09;Territoire français des Afars et Issas (Djibouti);CHAR;2
+REG_NAIS;Région de naissance;0X;Comores y.c Mayotte- Terres australes;CHAR;2
+REG_NAIS;Région de naissance;11;Île-de-France;CHAR;2
+REG_NAIS;Région de naissance;24;Centre-Val de Loire;CHAR;2
+REG_NAIS;Région de naissance;27;Bourgogne-Franche-Comté;CHAR;2
+REG_NAIS;Région de naissance;28;Normandie;CHAR;2
+REG_NAIS;Région de naissance;32;Hauts-de-France;CHAR;2
+REG_NAIS;Région de naissance;44;Grand Est;CHAR;2
+REG_NAIS;Région de naissance;52;Pays de la Loire;CHAR;2
+REG_NAIS;Région de naissance;53;Bretagne;CHAR;2
+REG_NAIS;Région de naissance;75;Nouvelle-Aquitaine;CHAR;2
+REG_NAIS;Région de naissance;76;Occitanie;CHAR;2
+REG_NAIS;Région de naissance;84;Auvergne-Rhône-Alpes;CHAR;2
+REG_NAIS;Région de naissance;93;Provence-Alpes-Côte d'Azur;CHAR;2
+REG_NAIS;Région de naissance;94;Corse;CHAR;2
+REG_NAIS;Région de naissance;9Y;Pacifique (Wallis-et-Futuna- Polynésie Française- Nouvelle- Calédonie- Ile de Clipperton);CHAR;2
+REG_NAIS;Région de naissance;99;Etranger et autres COM;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);01;Guadeloupe;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);02;Martinique;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);03;Guyane;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);04;La Réunion;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);05;Saint-Pierre-et-Miquelon;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);1A;Saint-Barthélemy;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);1B;Saint-Martin;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);11;Île-de-France;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);24;Centre-Val de Loire;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);27;Bourgogne-Franche-Comté;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);28;Normandie;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);32;Hauts-de-France;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);44;Grand Est;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);52;Pays de la Loire;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);53;Bretagne;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);75;Nouvelle-Aquitaine;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);76;Occitanie;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);84;Auvergne-Rhône-Alpes;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);93;Provence-Alpes-Côte d'Azur;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);94;Corse;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);AL;Allemagne;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);BE;Belgique;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);CH;Suisse;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);ES;Espagne et Andorre;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);GB;Royaume-Uni;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);IT;Italie;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);LU;Luxembourg;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);MO;Monaco;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);99;Autres cas;CHAR;2
+REG_TRA_22;Région de travail (en géographie 2022);**;Sans emploi (inactifs- anciens actifs- militaires du contingent- élèves- étudiants- personnes de moins de 14 ans- chômeurs);CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);01;Guadeloupe;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);02;Martinique;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);03;Guyane;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);04;La Réunion;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);05;Saint-Pierre-et-Miquelon;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);06;Mayotte;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);09;Territoire français des Afars et Issas (Djibouti);CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);0X;Comores y.c Mayotte- Terres australes;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);1A;Saint-Barthélemy;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);1B;Saint-Martin;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);11;Île-de-France;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);24;Centre-Val de Loire;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);27;Bourgogne-Franche-Comté;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);28;Normandie;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);32;Hauts-de-France;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);44;Grand Est;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);52;Pays de la Loire;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);53;Bretagne;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);75;Nouvelle-Aquitaine;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);76;Occitanie;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);84;Auvergne-Rhône-Alpes;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);93;Provence-Alpes-Côte d'Azur;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);94;Corse;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);9Y;Pacifique (Wallis-et-Futuna- Polynésie Française- Nouvelle- Calédonie- Ile de Clipperton);CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);99;Etranger et autres COM;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);XX;Non disponible;CHAR;2
+REG_RAN_22;Région de résidence antérieure (en géographie 2022);ZZ;Individu né après le 01/01/N-1;CHAR;2
+AGE_REV;Âge en années révolues détaillé;000;Moins de 1 an;CHAR;3
+AGE_REV;Âge en années révolues détaillé;001;1 an;CHAR;3
+AGE_REV;Âge en années révolues détaillé;002;2 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;003;3 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;004;4 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;005;5 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;006;6 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;007;7 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;008;8 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;009;9 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;010;10 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;011;11 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;012;12 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;013;13 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;014;14 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;015;15 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;016;16 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;017;17 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;018;18 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;019;19 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;020;20 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;021;21 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;022;22 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;023;23 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;024;24 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;025;25 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;026;26 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;027;27 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;028;28 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;029;29 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;030;30 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;031;31 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;032;32 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;033;33 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;034;34 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;035;35 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;036;36 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;037;37 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;038;38 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;039;39 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;040;40 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;041;41 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;042;42 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;043;43 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;044;44 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;045;45 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;046;46 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;047;47 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;048;48 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;049;49 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;050;50 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;051;51 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;052;52 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;053;53 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;054;54 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;055;55 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;056;56 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;057;57 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;058;58 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;059;59 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;060;60 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;061;61 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;062;62 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;063;63 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;064;64 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;065;65 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;066;66 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;067;67 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;068;68 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;069;69 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;070;70 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;071;71 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;072;72 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;073;73 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;074;74 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;075;75 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;076;76 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;077;77 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;078;78 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;079;79 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;080;80 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;081;81 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;082;82 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;083;83 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;084;84 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;085;85 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;086;86 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;087;87 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;088;88 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;089;89 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;090;90 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;091;91 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;092;92 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;093;93 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;094;94 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;095;95 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;096;96 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;097;97 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;098;98 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;099;99 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;100;100 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;101;101 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;102;102 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;103;103 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;104;104 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;105;105 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;106;106 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;107;107 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;108;108 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;109;109 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;110;110 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;111;111 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;112;112 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;113;113 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;114;114 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;115;115 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;116;116 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;117;117 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;118;118 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;119;119 ans;CHAR;3
+AGE_REV;Âge en années révolues détaillé;120;120 ans;CHAR;3
+SEXE;Sexe;1;Homme;CHAR;1
+SEXE;Sexe;2;Femme;CHAR;1
+STAT_CONJ;Statut conjugal;1;Célibataire;CHAR;1
+STAT_CONJ;Statut conjugal;2;Marié;CHAR;1
+STAT_CONJ;Statut conjugal;3;Veuf;CHAR;1
+STAT_CONJ;Statut conjugal;4;Divorcé;CHAR;1
+STAT_CONJ;Statut conjugal;5;Pacsé;CHAR;1
+STAT_CONJ;Statut conjugal;6;En concubinage;CHAR;1
+STAT_CONJ;Statut conjugal;A;Marié (RP2014);CHAR;1
+STAT_CONJ;Statut conjugal;B;Non marié (RP2014);CHAR;1
+NATIO;Nationalité regroupée;000;Français de naissance;CHAR;3
+NATIO;Nationalité regroupée;001;Français par acquisition;CHAR;3
+NATIO;Nationalité regroupée;1IT;Italiens;CHAR;3
+NATIO;Nationalité regroupée;1ES;Espagnols;CHAR;3
+NATIO;Nationalité regroupée;1PT;Portugais;CHAR;3
+NATIO;Nationalité regroupée;2**;Autres nationalités d'Europe;CHAR;3
+NATIO;Nationalité regroupée;3DZ;Algériens;CHAR;3
+NATIO;Nationalité regroupée;3MA;Marocains;CHAR;3
+NATIO;Nationalité regroupée;3TN;Tunisiens;CHAR;3
+NATIO;Nationalité regroupée;3**;Autres nationalités d'Afrique;CHAR;3
+NATIO;Nationalité regroupée;4TR;Turcs;CHAR;3
+NATIO;Nationalité regroupée;***;Autres nationalités;CHAR;3
+DIPL;Diplôme regroupé;0;Aucun diplôme;CHAR;1
+DIPL;Diplôme regroupé;1;Niveau CEP;CHAR;1
+DIPL;Diplôme regroupé;2;Niveau BEPC;CHAR;1
+DIPL;Diplôme regroupé;3;Niveau CAP-BEP;CHAR;1
+DIPL;Diplôme regroupé;4;Niveau BAC général ou technique;CHAR;1
+DIPL;Diplôme regroupé;5;Diplôme universitaire de 1er cycle, BTS, DUT;CHAR;1
+DIPL;Diplôme regroupé;6;Diplôme universitaire de 2e ou 3e cycle;CHAR;1
+DIPL;Diplôme regroupé;7;Diplôme supérieur au Baccalauréat;CHAR;1
+DIPL;Diplôme regroupé;*;Personnes de moins de 15 ans (17 ans pour le RP 1975) ou étudiants - élèves;CHAR;1
+DIPL;Diplôme regroupé;A;Aucun diplôme ou au mieux BEPC, brevet des collèges, DNB (RP2014);CHAR;1
+DIPL;Diplôme regroupé;B;CAP, BEP (RP2014);CHAR;1
+DIPL;Diplôme regroupé;C;Baccalauréat (général, techno, pro) (RP2014);CHAR;1
+DIPL;Diplôme regroupé;D;Diplôme d’études supérieures (RP2014);CHAR;1
+TYP_ACT;Type d'activité (en 6 postes);1;Actifs ayant un emploi;CHAR;1
+TYP_ACT;Type d'activité (en 6 postes);2;Chômeurs;CHAR;1
+TYP_ACT;Type d'activité (en 6 postes);3;Étudiants ou élèves;CHAR;1
+TYP_ACT;Type d'activité (en 6 postes);4;Militaires du contingent;CHAR;1
+TYP_ACT;Type d'activité (en 6 postes);5;Anciens actifs;CHAR;1
+TYP_ACT;Type d'activité (en 6 postes);6;Autres inactifs;CHAR;1
+NES4;Secteur d'activité (en 4 postes);1;Agriculture;CHAR;1
+NES4;Secteur d'activité (en 4 postes);2;Industrie;CHAR;1
+NES4;Secteur d'activité (en 4 postes);3;BTP;CHAR;1
+NES4;Secteur d'activité (en 4 postes);4;Tertiaire;CHAR;1
+NES4;Secteur d'activité (en 4 postes);9;Inactifs ou chômeurs;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);1;Agriculteurs;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);2;Artisans-commerçants-chefs d'entreprise;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);3;Cadres et professions intellectuelles supérieures;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);4;Professions intermédiaires;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);5;Employés;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);6;Ouvriers;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);8;Anciens actifs;CHAR;1
+CSP;Catégorie socioprofessionnelle (en 8 postes);9;Inactifs et chômeurs n'ayant jamais travaillé;CHAR;1
+POND;Pondération;;;NUM;15.10
